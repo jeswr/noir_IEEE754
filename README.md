@@ -19,11 +19,9 @@ This library provides IEEE 754 standard floating-point operations in Noir, enabl
 | Operation | Float32 | Float64 |
 |-----------|---------|---------|
 | Addition  | ✅       | ✅       |
-| Subtraction | 🚧     | 🚧      |
-| Multiplication | 🚧  | 🚧      |
-| Division | 🚧       | 🚧      |
-
-> 🚧 = Planned / In Progress
+| Subtraction | ✅     | ✅      |
+| Multiplication | ✅  | ✅      |
+| Division | ✅       | ✅      |
 
 ## Installation
 
@@ -41,19 +39,28 @@ use noir_IEEE754::float::{
     IEEE754Float32, IEEE754Float64,
     float32_from_bits, float32_to_bits,
     float64_from_bits, float64_to_bits,
-    add_float32, add_float64
+    add_float32, add_float64,
+    sub_float32, sub_float64,
+    mul_float32, mul_float64,
+    div_float32, div_float64
 };
 
 fn main() {
     // Create floats from bit representation
-    let a = float32_from_bits(0x3F800000); // 1.0f
+    let a = float32_from_bits(0x40400000); // 3.0f
     let b = float32_from_bits(0x40000000); // 2.0f
     
-    // Perform addition
-    let result = add_float32(a, b);
+    // Perform arithmetic operations
+    let sum = add_float32(a, b);        // 3.0 + 2.0 = 5.0
+    let diff = sub_float32(a, b);       // 3.0 - 2.0 = 1.0
+    let product = mul_float32(a, b);    // 3.0 * 2.0 = 6.0
+    let quotient = div_float32(a, b);   // 3.0 / 2.0 = 1.5
     
     // Convert back to bits
-    let bits = float32_to_bits(result); // 0x40400000 = 3.0f
+    let sum_bits = float32_to_bits(sum);         // 0x40A00000 = 5.0f
+    let diff_bits = float32_to_bits(diff);       // 0x3F800000 = 1.0f
+    let product_bits = float32_to_bits(product); // 0x40C00000 = 6.0f
+    let quotient_bits = float32_to_bits(quotient); // 0x3FC00000 = 1.5f
 }
 ```
 
@@ -78,8 +85,9 @@ float32_zero(sign)      // Returns ±0
 
 ### Current State
 
-The library implements IEEE 754 addition for both float32 and float64 with full support for:
+The library implements IEEE 754 arithmetic for both float32 and float64 with full support for:
 
+- ✅ **All basic operations**: Addition, subtraction, multiplication, division
 - ✅ **Normalized numbers**: Standard floating-point values
 - ✅ **Denormalized (subnormal) numbers**: Gradual underflow handling
 - ✅ **Special values**: ±Zero, ±Infinity, NaN (quiet and signaling)
@@ -88,9 +96,9 @@ The library implements IEEE 754 addition for both float32 and float64 with full 
 
 ### Next Steps
 
-1. **Implement Remaining Operations**: Subtraction, multiplication, division
-2. **Support Multiple Rounding Modes**: Round toward +∞, -∞, zero
-3. **Optimize Performance**: Reduce constraint count for ZK circuits
+1. **Support Multiple Rounding Modes**: Round toward +∞, -∞, zero
+2. **Optimize Performance**: Reduce constraint count for ZK circuits
+3. **Add comparison operations**: Less than, equal, greater than
 
 ## Contributing
 
