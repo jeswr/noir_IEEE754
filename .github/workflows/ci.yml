@@ -27,20 +27,14 @@ jobs:
 
       - name: Read test matrix
         id: matrix
-        shell: bash
         run: |
-          set -x  # Enable debugging
-          ls -la .github/
           if [ ! -f .github/test-matrix.json ]; then
             echo "Error: test-matrix.json not found"
             exit 1
           fi
-          cat .github/test-matrix.json
-          # Write compact JSON to file first to avoid any shell escaping issues
-          jq -c '.groups' .github/test-matrix.json > /tmp/groups.json
-          # Read it back and set as output
-          GROUPS=$(cat /tmp/groups.json)
-          echo "groups=${GROUPS}" >> $GITHUB_OUTPUT
+          # Note: Cannot use GROUPS as variable name - it's a reserved bash variable (user group IDs)
+          TEST_GROUPS=$(jq -c '.groups' .github/test-matrix.json)
+          echo "groups=${TEST_GROUPS}" >> $GITHUB_OUTPUT
           echo "Test groups: $(jq '.groups | length' .github/test-matrix.json) groups"
 
       - name: Upload generated tests
