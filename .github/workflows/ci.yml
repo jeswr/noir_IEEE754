@@ -8,38 +8,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  # First, generate the test matrix
-  setup:
-    runs-on: ubuntu-latest
-    outputs:
-      noir-versions: ${{ steps.versions.outputs.versions }}
-      test-groups: ${{ steps.groups.outputs.groups }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Read Noir versions
-        id: versions
-        run: |
-          VERSIONS=$(jq -c '.versions' .github/noir-versions.json)
-          echo "versions=$VERSIONS" >> $GITHUB_OUTPUT
-          echo "Noir versions: $VERSIONS"
-
-      - name: Generate test groups
-        id: groups
-        run: |
-          # Define test groups - each group runs ~500 tests (20 chunks of 25 tests each)
-          # Group by test module to make it easier to identify failures
-          GROUPS='[{"name": "unit-tests", "pattern": "test_float32 test_float64"},{"name": "add-shift", "pattern": "ieee754_tests::test_add_shift::"},{"name": "add-cancellation", "pattern": "ieee754_tests::test_add_cancellation::"},{"name": "add-cancellation-subnorm", "pattern": "ieee754_tests::test_add_cancellation_and_subnorm_result::"},{"name": "basic-types", "pattern": "ieee754_tests::test_basic_types_inputs:: ieee754_tests::test_basic_types_intermediate::"},{"name": "special-cases", "pattern": "ieee754_tests::test_hamming_distance:: ieee754_tests::test_overflow:: ieee754_tests::test_rounding:: ieee754_tests::test_underflow:: ieee754_tests::test_vicinity_of_rounding_boundaries::"},{"name": "special-sig-0", "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_00"},{"name": "special-sig-1", "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_01"},{"name": "special-sig-2", "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_02"},{"name": "special-sig-3", "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_03"},{"name": "special-sig-4", "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_04"},{"name": "special-sig-5", "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_05"},{"name": "special-sig-6", "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_06"}]'
-          echo "groups=$GROUPS" >> $GITHUB_OUTPUT
-
   # Lint and format check
   lint:
     runs-on: ubuntu-latest
-    needs: setup
     strategy:
       matrix:
-        noir-version: ${{ fromJson(needs.setup.outputs.noir-versions) }}
+        noir-version: ["1.0.0-beta.16", "1.0.0-beta.15", "1.0.0-beta.14"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -55,12 +29,37 @@ jobs:
   # Run tests in parallel groups
   test:
     runs-on: ubuntu-latest
-    needs: setup
     strategy:
       fail-fast: false
       matrix:
-        noir-version: ${{ fromJson(needs.setup.outputs.noir-versions) }}
-        group: ${{ fromJson(needs.setup.outputs.test-groups) }}
+        noir-version: ["1.0.0-beta.16", "1.0.0-beta.15", "1.0.0-beta.14"]
+        group:
+          - name: "unit-tests"
+            pattern: "test_float32 test_float64"
+          - name: "add-shift"
+            pattern: "ieee754_tests::test_add_shift::"
+          - name: "add-cancellation"
+            pattern: "ieee754_tests::test_add_cancellation::"
+          - name: "add-cancellation-subnorm"
+            pattern: "ieee754_tests::test_add_cancellation_and_subnorm_result::"
+          - name: "basic-types"
+            pattern: "ieee754_tests::test_basic_types_inputs:: ieee754_tests::test_basic_types_intermediate::"
+          - name: "special-cases"
+            pattern: "ieee754_tests::test_hamming_distance:: ieee754_tests::test_overflow:: ieee754_tests::test_rounding:: ieee754_tests::test_underflow:: ieee754_tests::test_vicinity_of_rounding_boundaries::"
+          - name: "special-sig-0"
+            pattern: "ieee754_tests::test_add_shift_and_special_significands::chunk_00"
+          - name: "special-sig-1"
+            pattern: "ieee754_tests::test_add_shift_and_special_significands::chunk_01"
+          - name: "special-sig-2"
+            pattern: "ieee754_tests::test_add_shift_and_special_significands::chunk_02"
+          - name: "special-sig-3"
+            pattern: "ieee754_tests::test_add_shift_and_special_significands::chunk_03"
+          - name: "special-sig-4"
+            pattern: "ieee754_tests::test_add_shift_and_special_significands::chunk_04"
+          - name: "special-sig-5"
+            pattern: "ieee754_tests::test_add_shift_and_special_significands::chunk_05"
+          - name: "special-sig-6"
+            pattern: "ieee754_tests::test_add_shift_and_special_significands::chunk_06"
     name: test (${{ matrix.noir-version }}, ${{ matrix.group.name }})
     steps:
       - name: Checkout repository
