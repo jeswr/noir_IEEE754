@@ -28,9 +28,14 @@ jobs:
       - name: Read test matrix
         id: matrix
         run: |
+          if [ ! -f .github/test-matrix.json ]; then
+            echo "Error: test-matrix.json not found"
+            ls -la .github/
+            exit 1
+          fi
           GROUPS=$(jq -c '.groups' .github/test-matrix.json)
           echo "groups=$GROUPS" >> $GITHUB_OUTPUT
-          echo "Test groups: $(echo $GROUPS | jq length) groups"
+          echo "Test groups: $(jq '.groups | length' .github/test-matrix.json) groups"
 
       - name: Upload generated tests
         uses: actions/upload-artifact@v4
