@@ -1,0 +1,268 @@
+{
+  "groups": [
+    {
+      "name": "unit-tests",
+      "module": "_unit_",
+      "start": 0,
+      "end": 0
+    },
+    {
+      "name": "add_cancellation_and_subnorm_result",
+      "module": "test_add_cancellation_and_subnorm_result",
+      "start": 0,
+      "end": 24
+    },
+    {
+      "name": "add_cancellation",
+      "module": "test_add_cancellation",
+      "start": 0,
+      "end": 2
+    },
+    {
+      "name": "add_shift_and_special_significands-0",
+      "module": "test_add_shift_and_special_significands",
+      "start": 0,
+      "end": 50
+    },
+    {
+      "name": "add_shift_and_special_significands-1",
+      "module": "test_add_shift_and_special_significands",
+      "start": 50,
+      "end": 100
+    },
+    {
+      "name": "add_shift_and_special_significands-2",
+      "module": "test_add_shift_and_special_significands",
+      "start": 100,
+      "end": 150
+    },
+    {
+      "name": "add_shift_and_special_significands-3",
+      "module": "test_add_shift_and_special_significands",
+      "start": 150,
+      "end": 200
+    },
+    {
+      "name": "add_shift_and_special_significands-4",
+      "module": "test_add_shift_and_special_significands",
+      "start": 200,
+      "end": 250
+    },
+    {
+      "name": "add_shift_and_special_significands-5",
+      "module": "test_add_shift_and_special_significands",
+      "start": 250,
+      "end": 300
+    },
+    {
+      "name": "add_shift_and_special_significands-6",
+      "module": "test_add_shift_and_special_significands",
+      "start": 300,
+      "end": 350
+    },
+    {
+      "name": "add_shift_and_special_significands-7",
+      "module": "test_add_shift_and_special_significands",
+      "start": 350,
+      "end": 400
+    },
+    {
+      "name": "add_shift_and_special_significands-8",
+      "module": "test_add_shift_and_special_significands",
+      "start": 400,
+      "end": 450
+    },
+    {
+      "name": "add_shift_and_special_significands-9",
+      "module": "test_add_shift_and_special_significands",
+      "start": 450,
+      "end": 500
+    },
+    {
+      "name": "add_shift_and_special_significands-10",
+      "module": "test_add_shift_and_special_significands",
+      "start": 500,
+      "end": 550
+    },
+    {
+      "name": "add_shift_and_special_significands-11",
+      "module": "test_add_shift_and_special_significands",
+      "start": 550,
+      "end": 600
+    },
+    {
+      "name": "add_shift_and_special_significands-12",
+      "module": "test_add_shift_and_special_significands",
+      "start": 600,
+      "end": 650
+    },
+    {
+      "name": "add_shift_and_special_significands-13",
+      "module": "test_add_shift_and_special_significands",
+      "start": 650,
+      "end": 700
+    },
+    {
+      "name": "add_shift_and_special_significands-14",
+      "module": "test_add_shift_and_special_significands",
+      "start": 700,
+      "end": 750
+    },
+    {
+      "name": "add_shift_and_special_significands-15",
+      "module": "test_add_shift_and_special_significands",
+      "start": 750,
+      "end": 800
+    },
+    {
+      "name": "add_shift_and_special_significands-16",
+      "module": "test_add_shift_and_special_significands",
+      "start": 800,
+      "end": 850
+    },
+    {
+      "name": "add_shift_and_special_significands-17",
+      "module": "test_add_shift_and_special_significands",
+      "start": 850,
+      "end": 900
+    },
+    {
+      "name": "add_shift_and_special_significands-18",
+      "module": "test_add_shift_and_special_significands",
+      "start": 900,
+      "end": 950
+    },
+    {
+      "name": "add_shift_and_special_significands-19",
+      "module": "test_add_shift_and_special_significands",
+      "start": 950,
+      "end": 1000
+    },
+    {
+      "name": "add_shift_and_special_significands-20",
+      "module": "test_add_shift_and_special_significands",
+      "start": 1000,
+      "end": 1050
+    },
+    {
+      "name": "add_shift_and_special_significands-21",
+      "module": "test_add_shift_and_special_significands",
+      "start": 1050,
+      "end": 1100
+    },
+    {
+      "name": "add_shift_and_special_significands-22",
+      "module": "test_add_shift_and_special_significands",
+      "start": 1100,
+      "end": 1150
+    },
+    {
+      "name": "add_shift_and_special_significands-23",
+      "module": "test_add_shift_and_special_significands",
+      "start": 1150,
+      "end": 1200
+    },
+    {
+      "name": "add_shift_and_special_significands-24",
+      "module": "test_add_shift_and_special_significands",
+      "start": 1200,
+      "end": 1250
+    },
+    {
+      "name": "add_shift_and_special_significands-25",
+      "module": "test_add_shift_and_special_significands",
+      "start": 1250,
+      "end": 1300
+    },
+    {
+      "name": "add_shift_and_special_significands-26",
+      "module": "test_add_shift_and_special_significands",
+      "start": 1300,
+      "end": 1318
+    },
+    {
+      "name": "add_shift",
+      "module": "test_add_shift",
+      "start": 0,
+      "end": 5
+    },
+    {
+      "name": "basic_types_inputs-0",
+      "module": "test_basic_types_inputs",
+      "start": 0,
+      "end": 50
+    },
+    {
+      "name": "basic_types_inputs-1",
+      "module": "test_basic_types_inputs",
+      "start": 50,
+      "end": 100
+    },
+    {
+      "name": "basic_types_inputs-2",
+      "module": "test_basic_types_inputs",
+      "start": 100,
+      "end": 142
+    },
+    {
+      "name": "basic_types_intermediate",
+      "module": "test_basic_types_intermediate",
+      "start": 0,
+      "end": 7
+    },
+    {
+      "name": "corner_rounding",
+      "module": "test_corner_rounding",
+      "start": 0,
+      "end": 1
+    },
+    {
+      "name": "divide_divide_by_zero_exception",
+      "module": "test_divide_divide_by_zero_exception",
+      "start": 0,
+      "end": 1
+    },
+    {
+      "name": "divide_trailing_zeros",
+      "module": "test_divide_trailing_zeros",
+      "start": 0,
+      "end": 1
+    },
+    {
+      "name": "hamming_distance",
+      "module": "test_hamming_distance",
+      "start": 0,
+      "end": 9
+    },
+    {
+      "name": "input_special_significand",
+      "module": "test_input_special_significand",
+      "start": 0,
+      "end": 47
+    },
+    {
+      "name": "overflow",
+      "module": "test_overflow",
+      "start": 0,
+      "end": 10
+    },
+    {
+      "name": "rounding",
+      "module": "test_rounding",
+      "start": 0,
+      "end": 3
+    },
+    {
+      "name": "underflow",
+      "module": "test_underflow",
+      "start": 0,
+      "end": 9
+    },
+    {
+      "name": "vicinity_of_rounding_boundaries",
+      "module": "test_vicinity_of_rounding_boundaries",
+      "start": 0,
+      "end": 5
+    }
+  ]
+}
