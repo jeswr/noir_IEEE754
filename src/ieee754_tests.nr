@@ -508,3 +508,73 @@ fn test_f32_add_49() {
     let result_bits = float32_to_bits(result);
     assert(result_bits == 0x1A82964E);
 }
+
+#[test]
+fn test_f32_add_50() {
+    // b32+ =0 +1.560B56P-2 +1.4D654EP-25 -> +1.560B58P-2 x
+    let a = float32_from_bits(0x3EAB05AB);
+    let b = float32_from_bits(0x3326B2A7);
+    let result = add_float32(a, b);
+    let result_bits = float32_to_bits(result);
+    assert(result_bits == 0x3EAB05AC);
+}
+
+#[test]
+fn test_f32_add_51() {
+    // b32+ =0 +1.4C3395P95 +1.1AF921P71 -> +1.4C3396P95 x
+    let a = float32_from_bits(0x6F2619CA);
+    let b = float32_from_bits(0x630D7C90);
+    let result = add_float32(a, b);
+    let result_bits = float32_to_bits(result);
+    assert(result_bits == 0x6F2619CB);
+}
+
+#[test]
+fn test_f32_add_52() {
+    // b32+ =0 +1.421BD5P-1 +1.68CCF5P-26 -> +1.421BD5P-1 x
+    let a = float32_from_bits(0x3F210DEA);
+    let b = float32_from_bits(0x32B4667A);
+    let result = add_float32(a, b);
+    let result_bits = float32_to_bits(result);
+    assert(result_bits == 0x3F210DEA);
+}
+
+#[test]
+fn test_f32_add_53() {
+    // b32+ =0 +1.6A62DFP-33 +1.3CA81BP-59 -> +1.6A62DFP-33 x
+    let a = float32_from_bits(0x2F35316F);
+    let b = float32_from_bits(0x221E540D);
+    let result = add_float32(a, b);
+    let result_bits = float32_to_bits(result);
+    assert(result_bits == 0x2F35316F);
+}
+
+#[test]
+fn test_f32_add_54() {
+    // b32+ =0 +1.604B1EP32 +1.0AFBEFP5 -> +1.604B1EP32 x
+    let a = float32_from_bits(0x4FB0258F);
+    let b = float32_from_bits(0x42057DF7);
+    let result = add_float32(a, b);
+    let result_bits = float32_to_bits(result);
+    assert(result_bits == 0x4FB0258F);
+}
+
+#[test]
+fn test_f32_add_55() {
+    // b32+ =0 +1.56735DP-89 +1.580FC2P-60 -> +1.580FC2P-60 x
+    let a = float32_from_bits(0x132B39AE);
+    let b = float32_from_bits(0x21AC07E1);
+    let result = add_float32(a, b);
+    let result_bits = float32_to_bits(result);
+    assert(result_bits == 0x21AC07E1);
+}
+
+#[test]
+fn test_f32_add_56() {
+    // b32+ =0 +1.4BDB9DP68 +1.266396P4 -> +1.4BDB9DP68 x
+    let a = float32_from_bits(0x61A5EDCE);
+    let b = float32_from_bits(0x419331CB);
+    let result = add_float32(a, b);
+    let result_bits = float32_to_bits(result);
+    assert(result_bits == 0x61A5EDCE);
+}

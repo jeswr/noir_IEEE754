@@ -5,6 +5,8 @@ IEEE 754 Test Suite to Noir Test Generator
 This script parses .fptest files from the IBM FPgen test suite 
 (https://github.com/sergev/ieee754-test-suite) and generates Noir test code.
 
+Test files are automatically downloaded and cached locally.
+
 Test file format:
   <precision><op> <rounding> [exception-flags] <operand1> [operand2] [operand3] -> <result> [result-flags]
 
@@ -15,18 +17,42 @@ Where:
   - operand format: <sign><significand>P<exponent> or special values (+Inf, -Inf, +Zero, -Zero, Q, S)
 
 Usage:
-  python generate_tests.py <input_file.fptest> [--output <output_file.nr>]
-  python generate_tests.py --dir <test_suite_dir> [--output <output_file.nr>]
+  python generate_tests.py [--output <output_file.nr>]
+  python generate_tests.py --files Add-Shift.fptest Basic-Types-Inputs.fptest
+  python generate_tests.py --all
 """
 
 import argparse
 import os
 import re
 import struct
+import urllib.request
+import urllib.error
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Optional
+
+# GitHub raw URL base for the IEEE 754 test suite
+TEST_SUITE_BASE_URL = "https://raw.githubusercontent.com/sergev/ieee754-test-suite/master"
+
+# Available test files in the repository
+AVAILABLE_TEST_FILES = [
+    "Add-Shift.fptest",
+    "Basic-Types-Inputs.fptest",
+    "Basic-Types-Intermediate.fptest", 
+    "Basic-Types-Outputs.fptest",
+    "Cancellation.fptest",
+    "FMA.fptest",
+    "Force-Overflow.fptest",
+    "Overflow-Shift.fptest",
+    "Rounding.fptest",
+    "Sticky-Bit-Cancellation.fptest",
+    "Underflow-Shift.fptest",
+]
+
+# Default cache directory (relative to script location)
+DEFAULT_CACHE_DIR = ".ieee754_test_cache"
 
 
 class Precision(Enum):
@@ -473,7 +499,7 @@ fn {test_name}() {{
 """
 
 
-def generate_noir_file(tests: list[TestCase], output_path: str, source_files: list[str]):
+def generate_noir_file(tests: list[TestCase], output_path: str, source_files: list[str], add_debug: bool = False):
     """Generate a complete Noir test file from test cases."""
     
     # Header
@@ -495,7 +521,7 @@ use crate::float::{{
     test_index = 0
     
     for test in tests:
-        code = generate_noir_test(test, test_index)
+        code = generate_noir_test(test, test_index, add_debug)
         if code:
             test_code.append(code)
             test_index += 1
@@ -508,18 +534,80 @@ use crate::float::{{
     print(f"Generated {len(test_code)} tests to {output_path}")
 
 
+def get_cache_dir() -> Path:
+    """Get the cache directory path, creating it if needed."""
+    # Cache directory is relative to the project root (parent of scripts/)
+    script_dir = Path(__file__).parent
+    project_root = script_dir.parent
+    cache_dir = project_root / DEFAULT_CACHE_DIR
+    cache_dir.mkdir(exist_ok=True)
+    return cache_dir
+
+
+def download_test_file(filename: str, cache_dir: Path) -> Path:
+    """Download a test file from the IEEE 754 test suite repository."""
+    cache_path = cache_dir / filename
+    
+    if cache_path.exists():
+        print(f"Using cached: {filename}")
+        return cache_path
+    
+    url = f"{TEST_SUITE_BASE_URL}/{filename}"
+    print(f"Downloading: {filename}...")
+    
+    try:
+        with urllib.request.urlopen(url, timeout=30) as response:
+            content = response.read()
+            cache_path.write_bytes(content)
+            print(f"  Downloaded {len(content):,} bytes")
+            return cache_path
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"Failed to download {filename}: HTTP {e.code}") from e
+    except urllib.error.URLError as e:
+        raise RuntimeError(f"Failed to download {filename}: {e.reason}") from e
+
+
+def list_available_files():
+    """Print list of available test files."""
+    print("Available IEEE 754 test files:")
+    for f in AVAILABLE_TEST_FILES:
+        print(f"  - {f}")
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description='Generate Noir tests from IEEE 754 test suite files'
+        description='Generate Noir tests from IEEE 754 test suite files',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s                              # Download and use Add-Shift.fptest (default)
+  %(prog)s --files Add-Shift.fptest     # Use specific file(s)
+  %(prog)s --all                        # Use all available test files
+  %(prog)s --list                       # List available test files
+  %(prog)s --local test.fptest          # Use a local file instead of downloading
+        """
     )
     parser.add_argument(
-        'input',
-        nargs='?',
-        help='Input .fptest file or directory'
+        '--files',
+        nargs='+',
+        metavar='FILE',
+        help='Test files to download and use (from IEEE 754 test suite)'
     )
     parser.add_argument(
-        '--dir',
-        help='Directory containing .fptest files'
+        '--all',
+        action='store_true',
+        help='Download and use all available test files'
+    )
+    parser.add_argument(
+        '--local',
+        nargs='+',
+        metavar='PATH',
+        help='Use local .fptest file(s) instead of downloading'
+    )
+    parser.add_argument(
+        '--list',
+        action='store_true',
+        help='List available test files and exit'
     )
     parser.add_argument(
         '--output', '-o',
@@ -544,23 +632,75 @@ def main():
         default=None,
         help='Maximum number of tests to generate'
     )
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='Add println statements for debugging'
+    )
+    parser.add_argument(
+        '--clear-cache',
+        action='store_true',
+        help='Clear the download cache before running'
+    )
     
     args = parser.parse_args()
     
-    input_path = args.input or args.dir
-    if not input_path:
-        parser.error('Please provide an input file or directory')
+    # Handle --list
+    if args.list:
+        list_available_files()
+        return
     
-    # Collect all .fptest files
+    # Get cache directory
+    cache_dir = get_cache_dir()
+    
+    # Handle --clear-cache
+    if args.clear_cache:
+        import shutil
+        if cache_dir.exists():
+            shutil.rmtree(cache_dir)
+            print(f"Cleared cache: {cache_dir}")
+        cache_dir.mkdir(exist_ok=True)
+    
+    # Collect test files
     fptest_files = []
-    if os.path.isdir(input_path):
-        for f in sorted(os.listdir(input_path)):
-            if f.endswith('.fptest'):
-                fptest_files.append(os.path.join(input_path, f))
-    elif os.path.isfile(input_path):
-        fptest_files = [input_path]
+    
+    if args.local:
+        # Use local files
+        for path in args.local:
+            if os.path.isfile(path):
+                fptest_files.append(path)
+            elif os.path.isdir(path):
+                for f in sorted(os.listdir(path)):
+                    if f.endswith('.fptest'):
+                        fptest_files.append(os.path.join(path, f))
+            else:
+                parser.error(f'Local path does not exist: {path}')
+    elif args.all:
+        # Download all available files
+        for filename in AVAILABLE_TEST_FILES:
+            try:
+                path = download_test_file(filename, cache_dir)
+                fptest_files.append(str(path))
+            except RuntimeError as e:
+                print(f"Warning: {e}")
+    elif args.files:
+        # Download specified files
+        for filename in args.files:
+            # Check if it's in the available list
+            if filename not in AVAILABLE_TEST_FILES:
+                print(f"Warning: '{filename}' not in known test files. Trying anyway...")
+            try:
+                path = download_test_file(filename, cache_dir)
+                fptest_files.append(str(path))
+            except RuntimeError as e:
+                print(f"Warning: {e}")
     else:
-        parser.error(f'Input path does not exist: {input_path}')
+        # Default: use Add-Shift.fptest
+        try:
+            path = download_test_file("Add-Shift.fptest", cache_dir)
+            fptest_files.append(str(path))
+        except RuntimeError as e:
+            parser.error(str(e))
     
     if not fptest_files:
         parser.error('No .fptest files found')
@@ -568,7 +708,7 @@ def main():
     # Parse all test files
     all_tests = []
     for filepath in fptest_files:
-        print(f"Parsing {filepath}...")
+        print(f"Parsing {os.path.basename(filepath)}...")
         tests = parse_fptest_file(filepath)
         all_tests.extend(tests)
     
@@ -601,7 +741,8 @@ def main():
     generate_noir_file(
         all_tests,
         args.output,
-        [os.path.basename(f) for f in fptest_files]
+        [os.path.basename(f) for f in fptest_files],
+        add_debug=args.debug
     )
 
 

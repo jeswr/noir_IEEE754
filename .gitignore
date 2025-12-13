@@ -1,0 +1,8 @@
+# IEEE 754 test suite cache (auto-downloaded)
+.ieee754_test_cache/
+
+# Noir build outputs
+target/
+
+# OS files
+.DS_Store
