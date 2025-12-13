@@ -36,7 +36,11 @@ jobs:
           fi
           echo "Debug: reading test-matrix.json"
           cat .github/test-matrix.json | head -20
-          GROUPS=$(jq -c '.groups' .github/test-matrix.json)
+          echo "Debug: checking jq version"
+          jq --version || echo "jq not found"
+          echo "Debug: running jq"
+          jq -c '.groups' .github/test-matrix.json > /tmp/groups.json 2>&1 || { echo "jq failed"; cat /tmp/groups.json; exit 1; }
+          GROUPS=$(cat /tmp/groups.json)
           echo "Debug: GROUPS length = ${#GROUPS}"
           echo "groups=$GROUPS" >> $GITHUB_OUTPUT
           echo "Test groups: $(jq '.groups | length' .github/test-matrix.json) groups"
