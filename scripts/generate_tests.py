@@ -173,78 +173,59 @@ def parse_fp_value(value_str: str) -> FPValue:
     return FPValue(sign=sign, significand=significand, exponent=exponent)
 
 
-def fp_value_to_bits32(val: FPValue) -> int:
-    """Convert an FPValue to IEEE 754 binary32 bits using Python's float hardware."""
+# Special bit patterns for IEEE 754
+_FLOAT32_SPECIAL = {
+    'qnan': 0x7FC00000,
+    'snan': 0x7F800001,
+    'pos_inf': 0x7F800000,
+    'neg_inf': 0xFF800000,
+    'pos_zero': 0x00000000,
+    'neg_zero': 0x80000000,
+}
+
+_FLOAT64_SPECIAL = {
+    'qnan': 0x7FF8000000000000,
+    'snan': 0x7FF0000000000001,
+    'pos_inf': 0x7FF0000000000000,
+    'neg_inf': 0xFFF0000000000000,
+    'pos_zero': 0x0000000000000000,
+    'neg_zero': 0x8000000000000000,
+}
+
+
+def fp_value_to_bits(val: FPValue, is_float32: bool = True) -> int:
+    """Convert an FPValue to IEEE 754 bits using Python's float hardware."""
+    special = _FLOAT32_SPECIAL if is_float32 else _FLOAT64_SPECIAL
+    to_bits = float32_to_bits if is_float32 else float64_to_bits
+    
     if val.is_nan:
-        # Return a canonical quiet NaN
-        if val.is_snan:
-            return 0x7F800001  # Signaling NaN
-        return 0x7FC00000  # Quiet NaN
-    
+        return special['snan'] if val.is_snan else special['qnan']
     if val.is_inf:
-        return 0xFF800000 if val.sign else 0x7F800000
-    
+        return special['neg_inf'] if val.sign else special['pos_inf']
     if val.is_zero:
-        return 0x80000000 if val.sign else 0x00000000
+        return special['neg_zero'] if val.sign else special['pos_zero']
     
-    # Parse the significand from the test file format
-    # Format: "1" + hex_fraction or "0" + hex_fraction (for denormals)
-    significand = val.significand
-    int_part = int(significand[0])  # 0 or 1
-    frac_hex = significand[1:]
-    
-    # Convert hex fraction to a decimal value
-    # Each hex digit represents 4 bits, so divide by 16^len
+    # Parse significand: "1" + hex_fraction or "0" + hex_fraction (for denormals)
+    int_part = int(val.significand[0])
+    frac_hex = val.significand[1:]
     frac_value = int(frac_hex, 16) / (16 ** len(frac_hex)) if frac_hex else 0.0
     
-    # Combine integer and fractional parts: e.g., "1.7FFFFF" -> 1.4999...
-    mantissa_value = int_part + frac_value
-    
-    # Construct the float using ldexp: value = mantissa * 2^exponent
-    float_value = math.ldexp(mantissa_value, val.exponent)
-    
-    # Apply sign
+    # Construct float using ldexp: value = mantissa * 2^exponent
+    float_value = math.ldexp(int_part + frac_value, val.exponent)
     if val.sign:
         float_value = -float_value
     
-    # Convert to bits using struct
-    return float32_to_bits(float_value)
+    return to_bits(float_value)
+
+
+def fp_value_to_bits32(val: FPValue) -> int:
+    """Convert an FPValue to IEEE 754 binary32 bits."""
+    return fp_value_to_bits(val, is_float32=True)
 
 
 def fp_value_to_bits64(val: FPValue) -> int:
-    """Convert an FPValue to IEEE 754 binary64 bits using Python's float hardware."""
-    if val.is_nan:
-        # Return a canonical quiet NaN
-        if val.is_snan:
-            return 0x7FF0000000000001  # Signaling NaN
-        return 0x7FF8000000000000  # Quiet NaN
-    
-    if val.is_inf:
-        return 0xFFF0000000000000 if val.sign else 0x7FF0000000000000
-    
-    if val.is_zero:
-        return 0x8000000000000000 if val.sign else 0x0000000000000000
-    
-    # Parse the significand from the test file format
-    significand = val.significand
-    int_part = int(significand[0])  # 0 or 1
-    frac_hex = significand[1:]
-    
-    # Convert hex fraction to a decimal value
-    frac_value = int(frac_hex, 16) / (16 ** len(frac_hex)) if frac_hex else 0.0
-    
-    # Combine integer and fractional parts
-    mantissa_value = int_part + frac_value
-    
-    # Construct the float using ldexp: value = mantissa * 2^exponent
-    float_value = math.ldexp(mantissa_value, val.exponent)
-    
-    # Apply sign
-    if val.sign:
-        float_value = -float_value
-    
-    # Convert to bits using struct
-    return float64_to_bits(float_value)
+    """Convert an FPValue to IEEE 754 binary64 bits."""
+    return fp_value_to_bits(val, is_float32=False)
 
 
 def parse_test_line(line: str, line_number: int) -> Optional[TestCase]:
@@ -397,128 +378,57 @@ def generate_noir_test(test: TestCase, index: int, add_debug: bool = False) -> O
     if test.operand2 is None:
         return None
     
-    # Skip tests where result is # (generic/don't care)
-    if test.result.is_nan and test.result.significand == "" and not test.result.is_snan:
-        # Could be a don't-care result, check if it's the # symbol
-        pass
-    
     is_float32 = test.precision == Precision.BINARY32
+    prec = "32" if is_float32 else "64"
+    sign_bit = 0x80000000 if is_float32 else 0x8000000000000000
+    hex_width = 8 if is_float32 else 16
     
-    if is_float32:
-        bits1 = fp_value_to_bits32(test.operand1)
-        bits2 = fp_value_to_bits32(test.operand2)
-        
-        # Compute expected result using Python's IEEE 754 hardware
-        # This ensures we test against actual IEEE 754 behavior
-        f1 = float32_from_bits(bits1)
-        f2 = float32_from_bits(bits2)
-        if test.operation == Operation.ADD:
-            result_float = f1 + f2
-        else:
-            result_float = f1 - f2
-        expected = float32_to_bits(result_float)
-        
-        from_bits_fn = "float32_from_bits"
-        to_bits_fn = "float32_to_bits"
-        op_fn = "add_float32" if test.operation == Operation.ADD else "sub_float32"
-        bits_type = "u32"
-    else:
-        bits1 = fp_value_to_bits64(test.operand1)
-        bits2 = fp_value_to_bits64(test.operand2)
-        
-        # Compute expected result using Python's IEEE 754 hardware
-        f1 = float64_from_bits(bits1)
-        f2 = float64_from_bits(bits2)
-        if test.operation == Operation.ADD:
-            result_float = f1 + f2
-        else:
-            result_float = f1 - f2
-        expected = float64_to_bits(result_float)
-        
-        from_bits_fn = "float64_from_bits"
-        to_bits_fn = "float64_to_bits"
-        op_fn = "add_float64" if test.operation == Operation.ADD else "sub_float64"
-        bits_type = "u64"
+    # Convert operands to bits
+    to_bits = fp_value_to_bits32 if is_float32 else fp_value_to_bits64
+    from_bits = float32_from_bits if is_float32 else float64_from_bits
+    bits1 = to_bits(test.operand1)
+    bits2 = to_bits(test.operand2)
     
-    test_name = generate_noir_test_name(test, index)
+    # Compute expected result using Python's IEEE 754 hardware
+    f1, f2 = from_bits(bits1), from_bits(bits2)
+    result_float = f1 + f2 if test.operation == Operation.ADD else f1 - f2
+    expected = (float32_to_bits if is_float32 else float64_to_bits)(result_float)
     
-    # Check if result is NaN (use Python's math.isnan)
-    result_is_nan = math.isnan(result_float)
-    
-    # For subtraction, we negate the second operand and use addition
+    # For subtraction, negate second operand and use addition
     if test.operation == Operation.SUBTRACT:
-        # a - b = a + (-b), so flip sign of operand2
-        if is_float32:
-            bits2 ^= 0x80000000  # Flip sign bit
-        else:
-            bits2 ^= 0x8000000000000000
-        op_fn = "add_float32" if is_float32 else "add_float64"
+        bits2 ^= sign_bit
     
-    # Format the bits as hex with proper prefix
-    if is_float32:
-        bits1_str = f"0x{bits1:08X}"
-        bits2_str = f"0x{bits2:08X}"
-        expected_str = f"0x{expected:08X}"
-    else:
-        bits1_str = f"0x{bits1:016X}"
-        bits2_str = f"0x{bits2:016X}"
-        expected_str = f"0x{expected:016X}"
+    # Format values
+    test_name = generate_noir_test_name(test, index)
+    bits1_str = f"0x{bits1:0{hex_width}X}"
+    bits2_str = f"0x{bits2:0{hex_width}X}"
+    expected_str = f"0x{expected:0{hex_width}X}"
     
-    # Handle NaN results specially - just check it's NaN
-    if result_is_nan:
-        if is_float32:
-            return f"""#[test]
-fn {test_name}() {{
-    // {test.raw_line}
-    let a = {from_bits_fn}({bits1_str});
-    let b = {from_bits_fn}({bits2_str});
-    let result = {op_fn}(a, b);
-    assert(float32_is_nan(result));
-}}
-"""
-        else:
-            return f"""#[test]
-fn {test_name}() {{
-    // {test.raw_line}
-    let a = {from_bits_fn}({bits1_str});
-    let b = {from_bits_fn}({bits2_str});
-    let result = {op_fn}(a, b);
-    assert(float64_is_nan(result));
-}}
-"""
-    
-    if add_debug:
-        # Add println statements for debugging
-        return f"""#[test]
-fn {test_name}() {{
-    // {test.raw_line}
-    let a = {from_bits_fn}({bits1_str});
-    let b = {from_bits_fn}({bits2_str});
-    let result = {op_fn}(a, b);
-    let result_bits = {to_bits_fn}(result);
+    # Generate test body
+    if math.isnan(result_float):
+        assertion = f"assert(float{prec}_is_nan(result));"
+    elif add_debug:
+        assertion = f"""let result_bits = float{prec}_to_bits(result);
     println(f"a: {{{bits1_str}}} b: {{{bits2_str}}} result: {{result_bits}} expected: {expected_str}");
-    assert(result_bits == {expected_str});
-}}
-"""
+    assert(result_bits == {expected_str});"""
+    else:
+        assertion = f"""let result_bits = float{prec}_to_bits(result);
+    assert(result_bits == {expected_str});"""
     
     return f"""#[test]
 fn {test_name}() {{
     // {test.raw_line}
-    let a = {from_bits_fn}({bits1_str});
-    let b = {from_bits_fn}({bits2_str});
-    let result = {op_fn}(a, b);
-    let result_bits = {to_bits_fn}(result);
-    assert(result_bits == {expected_str});
+    let a = float{prec}_from_bits({bits1_str});
+    let b = float{prec}_from_bits({bits2_str});
+    let result = add_float{prec}(a, b);
+    {assertion}
 }}
 """
 
 
-def generate_noir_file(tests: list[TestCase], output_path: str, source_files: list[str], add_debug: bool = False):
-    """Generate a complete Noir test file from test cases."""
-    
-    # Header
-    header = f"""// Auto-generated IEEE 754 test cases
-// Generated from: {', '.join(source_files)}
+# Common header for generated Noir test files
+NOIR_TEST_HEADER = """// Auto-generated IEEE 754 test cases
+// Generated from: {source_info}
 // Test suite source: https://github.com/sergev/ieee754-test-suite
 
 use crate::float::{{
@@ -529,24 +439,29 @@ use crate::float::{{
 }};
 
 """
+
+
+def generate_noir_file(tests: list[TestCase], output_path: str, source_files: list[str], add_debug: bool = False):
+    """Generate a complete Noir test file from test cases."""
+    header = NOIR_TEST_HEADER.format(source_info=', '.join(source_files))
     
-    # Generate tests
-    test_code = []
-    test_index = 0
+    test_code = [
+        code for i, test in enumerate(tests)
+        if (code := generate_noir_test(test, i, add_debug))
+    ]
     
-    for test in tests:
-        code = generate_noir_test(test, test_index, add_debug)
-        if code:
-            test_code.append(code)
-            test_index += 1
-    
-    # Write output
     with open(output_path, 'w') as f:
         f.write(header)
         f.write('\n'.join(test_code))
     
     print(f"Generated {len(test_code)} tests to {output_path}")
     return len(test_code)
+
+
+def _source_to_module_name(source_file: str) -> str:
+    """Convert a source filename to a valid Noir module name."""
+    base_name = os.path.splitext(source_file)[0]
+    return "test_" + re.sub(r'[^a-zA-Z0-9]', '_', base_name).lower()
 
 
 def generate_noir_file_per_source(
@@ -556,83 +471,54 @@ def generate_noir_file_per_source(
     chunk_size: int = 25
 ) -> dict[str, int]:
     """Generate separate Noir test files for each source file, chunked into groups."""
-    
     results = {}
     module_names = []
     
     for source_file, tests in tests_by_file.items():
-        # Create module name from filename
-        base_name = os.path.splitext(source_file)[0]
-        # Convert to valid Noir module name (lowercase, underscores)
-        module_name = "test_" + re.sub(r'[^a-zA-Z0-9]', '_', base_name).lower()
+        module_name = _source_to_module_name(source_file)
         
-        # Generate all test code first
-        all_test_code = []
-        test_index = 0
-        
-        for test in tests:
-            code = generate_noir_test(test, test_index, add_debug)
-            if code:
-                all_test_code.append(code)
-                test_index += 1
+        # Generate all test code
+        all_test_code = [
+            code for i, test in enumerate(tests)
+            if (code := generate_noir_test(test, i, add_debug))
+        ]
         
         if not all_test_code:
             continue
         
-        # Create folder for this test source (only if we have tests)
+        # Create folder and write chunks
         module_dir = os.path.join(output_dir, module_name)
         os.makedirs(module_dir, exist_ok=True)
         
-        # Header template for each chunk file
-        header_template = """// Auto-generated IEEE 754 test cases
-// Generated from: {source_file} (chunk {chunk_num})
-// Test suite source: https://github.com/sergev/ieee754-test-suite
-
-use crate::float::{{
-    IEEE754Float32, IEEE754Float64,
-    float32_from_bits, float32_to_bits, float32_is_nan,
-    float64_from_bits, float64_to_bits, float64_is_nan,
-    add_float32, add_float64,
-}};
-
-"""
-        
-        # Chunk the tests
         chunks = [all_test_code[i:i + chunk_size] for i in range(0, len(all_test_code), chunk_size)]
         chunk_names = []
         
         for chunk_idx, chunk in enumerate(chunks):
             chunk_name = f"chunk_{chunk_idx:04d}"
             chunk_names.append(chunk_name)
-            chunk_path = os.path.join(module_dir, f"{chunk_name}.nr")
+            header = NOIR_TEST_HEADER.format(source_info=f"{source_file} (chunk {chunk_idx})")
             
-            header = header_template.format(source_file=source_file, chunk_num=chunk_idx)
-            
-            with open(chunk_path, 'w') as f:
+            with open(os.path.join(module_dir, f"{chunk_name}.nr"), 'w') as f:
                 f.write(header)
                 f.write('\n'.join(chunk))
         
-        # Generate mod.nr for this module folder
-        module_mod_path = os.path.join(module_dir, "mod.nr")
-        with open(module_mod_path, 'w') as f:
+        # Generate mod.nr for this module
+        with open(os.path.join(module_dir, "mod.nr"), 'w') as f:
             f.write(f"// Auto-generated module index for {source_file}\n")
             f.write(f"// Contains {len(all_test_code)} tests in {len(chunks)} chunks of {chunk_size}\n\n")
-            for chunk_name in chunk_names:
-                f.write(f"mod {chunk_name};\n")
+            f.writelines(f"mod {name};\n" for name in chunk_names)
         
         print(f"Generated {len(all_test_code)} tests in {len(chunks)} chunks to {module_dir}/")
         results[source_file] = len(all_test_code)
         module_names.append(module_name)
     
-    # Generate top-level module index file
-    index_path = os.path.join(output_dir, "mod.nr")
-    with open(index_path, 'w') as f:
+    # Generate top-level module index
+    with open(os.path.join(output_dir, "mod.nr"), 'w') as f:
         f.write("// Auto-generated module index for IEEE 754 tests\n")
         f.write("// Each module corresponds to a source .fptest file\n\n")
-        for module_name in sorted(module_names):
-            f.write(f"mod {module_name};\n")
+        f.writelines(f"mod {name};\n" for name in sorted(module_names))
     
-    print(f"\nGenerated module index at {index_path}")
+    print(f"\nGenerated module index at {output_dir}/mod.nr")
     return results
 
 
