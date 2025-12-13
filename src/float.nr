@@ -15,9 +15,9 @@ pub struct Float {
 // - 8 bits exponent (bias 127)
 // - 23 bits mantissa (with implicit leading 1 for normalized numbers)
 pub struct IEEE754Float32 {
-    pub sign: u1,           // 0 = positive, 1 = negative
-    pub exponent: u8,       // Biased exponent (0-255)
-    pub mantissa: u32,      // 23-bit mantissa stored in lower bits
+    pub sign: u1, // 0 = positive, 1 = negative
+    pub exponent: u8, // Biased exponent (0-255)
+    pub mantissa: u32, // 23-bit mantissa stored in lower bits
 }
 
 // IEEE 754 Double-Precision (64-bit) Float
@@ -25,9 +25,9 @@ pub struct IEEE754Float32 {
 // - 11 bits exponent (bias 1023)
 // - 52 bits mantissa (with implicit leading 1 for normalized numbers)
 pub struct IEEE754Float64 {
-    pub sign: u1,           // 0 = positive, 1 = negative
-    pub exponent: u16,      // Biased exponent (0-2047), using u16 to hold 11 bits
-    pub mantissa: u64,      // 52-bit mantissa stored in lower bits
+    pub sign: u1, // 0 = positive, 1 = negative
+    pub exponent: u16, // Biased exponent (0-2047), using u16 to hold 11 bits
+    pub mantissa: u64, // 52-bit mantissa stored in lower bits
 }
 
 // Constants for IEEE 754 Float32
@@ -159,12 +159,20 @@ fn shift_right_sticky_u64(value: u64, shift: u64) -> u64 {
     if shift == 0 {
         value
     } else if shift >= 64 {
-        if value != 0 { 1 } else { 0 }
+        if value != 0 {
+            1
+        } else {
+            0
+        }
     } else {
         let mask = (1 << shift) - 1;
         let shifted_out = value & mask;
         let result = value >> shift;
-        if shifted_out != 0 { result | 1 } else { result }
+        if shifted_out != 0 {
+            result | 1
+        } else {
+            result
+        }
     }
 }
 
@@ -196,8 +204,16 @@ pub fn add_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     };
 
     // Get effective exponents (denormals have effective exponent of 1)
-    let exp_a_eff: u64 = if a_is_denormal | a_is_zero { 1 } else { a.exponent as u64 };
-    let exp_b_eff: u64 = if b_is_denormal | b_is_zero { 1 } else { b.exponent as u64 };
+    let exp_a_eff: u64 = if a_is_denormal | a_is_zero {
+        1
+    } else {
+        a.exponent as u64
+    };
+    let exp_b_eff: u64 = if b_is_denormal | b_is_zero {
+        1
+    } else {
+        b.exponent as u64
+    };
 
     // Shift mantissas left to provide guard, round, and sticky bits (3 extra bits)
     let mut mant_a: u64 = mant_a_raw << 3;
@@ -205,7 +221,7 @@ pub fn add_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
 
     // Align mantissas by shifting the smaller exponent's mantissa right
     let mut result_exp: u64 = exp_a_eff;
-    
+
     if exp_a_eff > exp_b_eff {
         let shift_amount = exp_a_eff - exp_b_eff;
         result_exp = exp_a_eff;
@@ -247,7 +263,7 @@ pub fn add_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
 
     // Handle underflow (leading zeros) - shift left until normalized
     let normal_position: u64 = (FLOAT32_IMPLICIT_BIT as u64) << 3;
-    
+
     for _ in 0..26 {
         if (result_mant != 0) & (result_mant < normal_position) & (result_exp > 1) {
             result_mant = result_mant << 1;
@@ -294,21 +310,18 @@ pub fn add_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     };
 
     // Compute normal result
-    let normal_result = IEEE754Float32 {
-        sign: result_sign,
-        exponent: result_exp as u8,
-        mantissa: final_mantissa
-    };
+    let normal_result =
+        IEEE754Float32 { sign: result_sign, exponent: result_exp as u8, mantissa: final_mantissa };
 
     // Build final result based on special case flags
     // Priority: NaN > Infinity > Zero > Normal
 
     // Result for NaN cases
     let nan_result = float32_nan();
-    
+
     // Result for infinity + (-infinity) = NaN
     let inf_opposite_signs_result = float32_nan();
-    
+
     // Determine final result using conditionals without early returns
     let mut result = normal_result;
 
@@ -384,8 +397,16 @@ pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     };
 
     // Get effective exponents (denormals have effective exponent of 1)
-    let exp_a_eff: u64 = if a_is_denormal | a_is_zero { 1 } else { a.exponent as u64 };
-    let exp_b_eff: u64 = if b_is_denormal | b_is_zero { 1 } else { b.exponent as u64 };
+    let exp_a_eff: u64 = if a_is_denormal | a_is_zero {
+        1
+    } else {
+        a.exponent as u64
+    };
+    let exp_b_eff: u64 = if b_is_denormal | b_is_zero {
+        1
+    } else {
+        b.exponent as u64
+    };
 
     // Shift mantissas left to provide guard, round, and sticky bits
     // For float64, we have 52-bit mantissa + 1 implicit bit = 53 bits
@@ -398,7 +419,7 @@ pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
 
     // Align mantissas by shifting the smaller exponent's mantissa right
     let mut result_exp: u64 = exp_a_eff;
-    
+
     if exp_a_eff > exp_b_eff {
         let shift_amount = exp_a_eff - exp_b_eff;
         result_exp = exp_a_eff;
@@ -440,7 +461,7 @@ pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
         result_mant = mant_a + mant_b;
         result_sticky = sticky_a | sticky_b;
         result_sign = a.sign;
-        
+
         // Check for carry/overflow (if result < either operand due to wrap)
         if result_mant < mant_a {
             // Overflow in u64, shift right and adjust
@@ -493,7 +514,7 @@ pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
 
     // Handle underflow (leading zeros) - shift left until normalized
     let normal_position: u64 = FLOAT64_IMPLICIT_BIT << 8;
-    
+
     for _ in 0..60 {
         if (result_mant != 0) & (result_mant < normal_position) & (result_exp > 1) {
             result_mant = result_mant << 1;
@@ -521,7 +542,8 @@ pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     let halfway: u64 = 0x80; // 128 = 0b10000000
 
     // Round up if > halfway, or if exactly halfway and LSB is 1 (ties to even)
-    let should_round_up = (round_bits > halfway) | ((round_bits == halfway) & ((result_mant & 1) == 1));
+    let should_round_up =
+        (round_bits > halfway) | ((round_bits == halfway) & ((result_mant & 1) == 1));
     if should_round_up {
         result_mant = result_mant + 1;
 
@@ -546,16 +568,13 @@ pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     };
 
     // Compute normal result
-    let normal_result = IEEE754Float64 {
-        sign: result_sign,
-        exponent: result_exp as u16,
-        mantissa: final_mantissa
-    };
+    let normal_result =
+        IEEE754Float64 { sign: result_sign, exponent: result_exp as u16, mantissa: final_mantissa };
 
     // Build final result based on special case flags
     let nan_result = float64_nan();
     let inf_opposite_signs_result = float64_nan();
-    
+
     let mut result = normal_result;
 
     // Zero result check
@@ -604,21 +623,21 @@ pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
 // ============================================================================
 
 // Float number precision of mantissa
-global precision : Field = 7;
+global precision: Field = 7;
 
 // ReLU activation function used for neural network ML models
-fn relu(x : Float) -> Float {
+fn relu(x: Float) -> Float {
     let mut res = x;
     if x.sign as u64 == 1 {
         res = Float { sign: 0, mantissa: 0, exponent: 100 };
-    } 
+    }
 
     res
 }
 
 // Truncate Float to "precision" number of digits, 5 in the example
 fn truncate(num: Float) -> Float {
-    let lookup : [Field; 25] = [
+    let lookup: [Field; 25] = [
         1,
         10,
         100,
@@ -646,25 +665,29 @@ fn truncate(num: Float) -> Float {
         1000000000000000000000000,
     ];
 
-    let maxValue : Field = 10.pow_32(precision);
-    let mut decValue : Field = 1;
-    let mut logValue : u32 = 0;
+    let maxValue: Field = 10.pow_32(precision);
+    let mut decValue: Field = 1;
+    let mut logValue: u32 = 0;
 
     for i in 0..25 {
         if num.mantissa as u64 >= lookup[i] as u64 {
             decValue = lookup[i];
             logValue = i as u32;
-        }  
+        }
     }
 
     decValue *= 10;
     logValue += 1;
 
-    let mut res : Float = Float { sign: num.sign, mantissa: num.mantissa, exponent: num.exponent };
+    let mut res: Float = Float { sign: num.sign, mantissa: num.mantissa, exponent: num.exponent };
 
     if logValue as u64 > precision as u64 {
         let diff = (decValue / maxValue) as u64;
-        res = Float { sign: num.sign, mantissa: (num.mantissa as u64 / diff) as Field, exponent: num.exponent + ((logValue as Field) - precision)};
+        res = Float {
+            sign: num.sign,
+            mantissa: (num.mantissa as u64 / diff) as Field,
+            exponent: num.exponent + ((logValue as Field) - precision),
+        };
     }
 
     if res.mantissa == 0 {
@@ -675,10 +698,10 @@ fn truncate(num: Float) -> Float {
 }
 
 // Multiplication of Float numbers
-fn mulFloats(x : Float, y : Float) -> Float {
+fn mulFloats(x: Float, y: Float) -> Float {
     let mant = x.mantissa * y.mantissa;
     let exp = x.exponent + y.exponent - 100;
-    let mut sign : Field = 0;
+    let mut sign: Field = 0;
 
     if x.sign != y.sign {
         sign = 1;
@@ -688,13 +711,12 @@ fn mulFloats(x : Float, y : Float) -> Float {
 }
 
 // Dividing of Float numbers
-fn divFloats(x : Float, y: Float) -> Float {
-
+fn divFloats(x: Float, y: Float) -> Float {
     assert(y.mantissa as u64 > 0);
 
     let mut exp1: Field = x.exponent;
     let mut mant1: u64 = x.mantissa as u64;
-    
+
     let exp2: Field = y.exponent;
     let mant2: Field = y.mantissa;
 
@@ -709,7 +731,7 @@ fn divFloats(x : Float, y: Float) -> Float {
     for i in 0..7 {
         let div = mant1 / mant2 as u64;
         mant1 = (mant1 - mant2 as u64 * div) * 10;
-        
+
         // For precision N, the highest exponent is 10^(N-1)
         let exp = precision - (i as Field) - 1;
         let pow = 10.pow_32(exp) as u64;
@@ -718,39 +740,39 @@ fn divFloats(x : Float, y: Float) -> Float {
 
     let new_exp = 100 + exp1 - exp2 - precision + 1;
 
-    let mut new_sign : Field = 0;
+    let mut new_sign: Field = 0;
 
     if x.sign as u64 != y.sign as u64 {
         new_sign = 1;
     }
 
-    Float{sign: new_sign, mantissa: new_mant as Field, exponent: new_exp}
+    Float { sign: new_sign, mantissa: new_mant as Field, exponent: new_exp }
 }
 
 // Sumation of Float numbers
-fn addFloats(x : Float, y : Float) -> Float {
+fn addFloats(x: Float, y: Float) -> Float {
     let mut mant_1 = x.mantissa;
     let mut mant_2 = y.mantissa;
 
     let mut exp_1 = x.exponent;
     let mut exp_2 = y.exponent;
 
-    let mut diff : Field = 0;
-    
-    if exp_1 as u64 > exp_2 as u64 { 
+    let mut diff: Field = 0;
+
+    if exp_1 as u64 > exp_2 as u64 {
         diff = exp_1 - exp_2;
     } else {
         diff = exp_2 - exp_1;
     }
 
-    let mut pow10 : Field = 10.pow_32(diff);
+    let mut pow10: Field = 10.pow_32(diff);
 
     if x.exponent as u64 < y.exponent as u64 {
-      mant_2 *= pow10;
-      exp_1 = x.exponent;
+        mant_2 *= pow10;
+        exp_1 = x.exponent;
     } else {
-      mant_1 *= pow10;
-      exp_1 = y.exponent;
+        mant_1 *= pow10;
+        exp_1 = y.exponent;
     }
 
     let mut sum_mant = mant_1 + mant_2;
@@ -764,11 +786,14 @@ fn addFloats(x : Float, y : Float) -> Float {
             sign = y.sign;
         }
     }
-    
+
     truncate(Float { sign: sign, mantissa: sum_mant, exponent: exp_1 })
 }
 
 // Subtraction of float numbers
-fn subFloats(x : Float, y : Float) -> Float {
-  addFloats(x, Float { sign: 1 - y.sign, mantissa: y.mantissa, exponent: y.exponent })
+fn subFloats(x: Float, y: Float) -> Float {
+    addFloats(
+        x,
+        Float { sign: 1 - y.sign, mantissa: y.mantissa, exponent: y.exponent },
+    )
 }
