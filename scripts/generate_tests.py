@@ -174,7 +174,7 @@ def parse_fp_value(value_str: str) -> FPValue:
 
 
 def fp_value_to_bits32(val: FPValue) -> int:
-    """Convert an FPValue to IEEE 754 binary32 bits."""
+    """Convert an FPValue to IEEE 754 binary32 bits using Python's float hardware."""
     if val.is_nan:
         # Return a canonical quiet NaN
         if val.is_snan:
@@ -187,60 +187,32 @@ def fp_value_to_bits32(val: FPValue) -> int:
     if val.is_zero:
         return 0x80000000 if val.sign else 0x00000000
     
-    # Parse the significand
+    # Parse the significand from the test file format
     # Format: "1" + hex_fraction or "0" + hex_fraction (for denormals)
-    # The hex_fraction in the test file represents the exact mantissa bits
     significand = val.significand
-    is_denormal = significand[0] == '0'
-    
-    # Get the fraction part (after the implicit bit indicator)
+    int_part = int(significand[0])  # 0 or 1
     frac_hex = significand[1:]
-    frac_bits = int(frac_hex, 16) if frac_hex else 0
     
-    # The test file format uses 6 hex digits (24 bits) for the mantissa
-    # IEEE 754 float32 has 23 bits, so we need to shift right by 1
-    # The test file shows results with 1 extra bit of precision - if that bit
-    # is 1, the result should round UP to represent the correctly rounded float32
-    hex_bits = len(frac_hex) * 4
-    if hex_bits > 23:
-        shift_amount = hex_bits - 23
-        # Get the bit(s) being shifted out
-        round_bit = (frac_bits >> (shift_amount - 1)) & 1
-        frac_bits >>= shift_amount
-        # Round up if the shifted-out bit is 1
-        if round_bit:
-            frac_bits += 1
-    elif hex_bits < 23:
-        frac_bits <<= (23 - hex_bits)
+    # Convert hex fraction to a decimal value
+    # Each hex digit represents 4 bits, so divide by 16^len
+    frac_value = int(frac_hex, 16) / (16 ** len(frac_hex)) if frac_hex else 0.0
     
-    mantissa = frac_bits & 0x7FFFFF
+    # Combine integer and fractional parts: e.g., "1.7FFFFF" -> 1.4999...
+    mantissa_value = int_part + frac_value
     
-    if is_denormal:
-        # Denormalized number: exponent = 0
-        biased_exp = 0
-    else:
-        # Normalized number
-        # Calculate biased exponent
-        biased_exp = val.exponent + 127
-        
-        # Handle overflow/underflow
-        if biased_exp >= 255:
-            # Overflow to infinity
-            return (val.sign << 31) | 0x7F800000
-        if biased_exp <= 0:
-            # Underflow to zero or denormal
-            if biased_exp < -23:
-                return val.sign << 31  # Zero
-            # Denormalize
-            shift = 1 - biased_exp
-            mantissa = ((1 << 23) | mantissa) >> shift
-            biased_exp = 0
+    # Construct the float using ldexp: value = mantissa * 2^exponent
+    float_value = math.ldexp(mantissa_value, val.exponent)
     
-    return (val.sign << 31) | (biased_exp << 23) | mantissa
+    # Apply sign
+    if val.sign:
+        float_value = -float_value
+    
+    # Convert to bits using struct
+    return float32_to_bits(float_value)
 
 
 def fp_value_to_bits64(val: FPValue) -> int:
-    """Convert an FPValue to IEEE 754 binary64 bits."""
+    """Convert an FPValue to IEEE 754 binary64 bits using Python's float hardware."""
     if val.is_nan:
         # Return a canonical quiet NaN
         if val.is_snan:
@@ -253,44 +225,26 @@ def fp_value_to_bits64(val: FPValue) -> int:
     if val.is_zero:
         return 0x8000000000000000 if val.sign else 0x0000000000000000
     
-    # Parse the significand
+    # Parse the significand from the test file format
     significand = val.significand
-    is_denormal = significand[0] == '0'
-    
-    # Get the fraction part (after the implicit bit indicator)
+    int_part = int(significand[0])  # 0 or 1
     frac_hex = significand[1:]
-    frac_bits = int(frac_hex, 16) if frac_hex else 0
     
-    # Adjust to 52-bit mantissa with proper rounding
-    hex_bits = len(frac_hex) * 4
-    if hex_bits > 52:
-        shift_amount = hex_bits - 52
-        # Get the bit(s) being shifted out
-        round_bit = (frac_bits >> (shift_amount - 1)) & 1
-        frac_bits >>= shift_amount
-        # Round up if the shifted-out bit is 1
-        if round_bit:
-            frac_bits += 1
-    elif hex_bits < 52:
-        frac_bits <<= (52 - hex_bits)
+    # Convert hex fraction to a decimal value
+    frac_value = int(frac_hex, 16) / (16 ** len(frac_hex)) if frac_hex else 0.0
     
-    mantissa = frac_bits & 0xFFFFFFFFFFFFF
+    # Combine integer and fractional parts
+    mantissa_value = int_part + frac_value
     
-    if is_denormal:
-        biased_exp = 0
-    else:
-        biased_exp = val.exponent + 1023
-        
-        if biased_exp >= 2047:
-            return (val.sign << 63) | 0x7FF0000000000000
-        if biased_exp <= 0:
-            if biased_exp < -52:
-                return val.sign << 63
-            shift = 1 - biased_exp
-            mantissa = ((1 << 52) | mantissa) >> shift
-            biased_exp = 0
+    # Construct the float using ldexp: value = mantissa * 2^exponent
+    float_value = math.ldexp(mantissa_value, val.exponent)
     
-    return (val.sign << 63) | (biased_exp << 52) | mantissa
+    # Apply sign
+    if val.sign:
+        float_value = -float_value
+    
+    # Convert to bits using struct
+    return float64_to_bits(float_value)
 
 
 def parse_test_line(line: str, line_number: int) -> Optional[TestCase]:
