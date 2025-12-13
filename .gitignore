@@ -4,5 +4,7 @@
 # Noir build outputs
 target/
 
+src/ieee754_tests/
+
 # OS files
 .DS_Store

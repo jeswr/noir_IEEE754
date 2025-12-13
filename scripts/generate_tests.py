@@ -36,19 +36,25 @@ from typing import Optional
 # GitHub raw URL base for the IEEE 754 test suite
 TEST_SUITE_BASE_URL = "https://raw.githubusercontent.com/sergev/ieee754-test-suite/master"
 
-# Available test files in the repository
+# Available test files in the repository (binary floating-point only, not decimal)
 AVAILABLE_TEST_FILES = [
+    "Add-Cancellation-And-Subnorm-Result.fptest",
+    "Add-Cancellation.fptest",
+    "Add-Shift-And-Special-Significands.fptest",
     "Add-Shift.fptest",
     "Basic-Types-Inputs.fptest",
-    "Basic-Types-Intermediate.fptest", 
-    "Basic-Types-Outputs.fptest",
-    "Cancellation.fptest",
-    "FMA.fptest",
-    "Force-Overflow.fptest",
-    "Overflow-Shift.fptest",
+    "Basic-Types-Intermediate.fptest",
+    "Compare-Different-Input-Field-Relations.fptest",
+    "Corner-Rounding.fptest",
+    "Divide-Divide-By-Zero-Exception.fptest",
+    "Divide-Trailing-Zeros.fptest",
+    "Hamming-Distance.fptest",
+    "Input-Special-Significand.fptest",
+    "Overflow.fptest",
     "Rounding.fptest",
-    "Sticky-Bit-Cancellation.fptest",
-    "Underflow-Shift.fptest",
+    "Sticky-Bit-Calculation.fptest",
+    "Underflow.fptest",
+    "Vicinity-Of-Rounding-Boundaries.fptest",
 ]
 
 # Default cache directory (relative to script location)
@@ -532,6 +538,71 @@ use crate::float::{{
         f.write('\n'.join(test_code))
     
     print(f"Generated {len(test_code)} tests to {output_path}")
+    return len(test_code)
+
+
+def generate_noir_file_per_source(
+    tests_by_file: dict[str, list[TestCase]], 
+    output_dir: str, 
+    add_debug: bool = False
+) -> dict[str, int]:
+    """Generate separate Noir test files for each source file."""
+    
+    results = {}
+    module_names = []
+    
+    for source_file, tests in tests_by_file.items():
+        # Create module name from filename
+        base_name = os.path.splitext(source_file)[0]
+        # Convert to valid Noir module name (lowercase, underscores)
+        module_name = "test_" + re.sub(r'[^a-zA-Z0-9]', '_', base_name).lower()
+        
+        output_path = os.path.join(output_dir, f"{module_name}.nr")
+        
+        # Header
+        header = f"""// Auto-generated IEEE 754 test cases
+// Generated from: {source_file}
+// Test suite source: https://github.com/sergev/ieee754-test-suite
+
+use crate::float::{{
+    IEEE754Float32, IEEE754Float64,
+    float32_from_bits, float32_to_bits, float32_is_nan,
+    float64_from_bits, float64_to_bits, float64_is_nan,
+    add_float32, add_float64,
+}};
+
+"""
+        
+        # Generate tests
+        test_code = []
+        test_index = 0
+        
+        for test in tests:
+            code = generate_noir_test(test, test_index, add_debug)
+            if code:
+                test_code.append(code)
+                test_index += 1
+        
+        if test_code:
+            # Write output
+            with open(output_path, 'w') as f:
+                f.write(header)
+                f.write('\n'.join(test_code))
+            
+            print(f"Generated {len(test_code)} tests to {output_path}")
+            results[source_file] = len(test_code)
+            module_names.append(module_name)  # Only add if we actually generated tests
+    
+    # Generate module index file
+    index_path = os.path.join(output_dir, "mod.nr")
+    with open(index_path, 'w') as f:
+        f.write("// Auto-generated module index for IEEE 754 tests\n")
+        f.write("// Each test file corresponds to a source .fptest file\n\n")
+        for module_name in sorted(module_names):
+            f.write(f"mod {module_name};\n")
+    
+    print(f"\nGenerated module index at {index_path}")
+    return results
 
 
 def get_cache_dir() -> Path:
@@ -583,6 +654,7 @@ Examples:
   %(prog)s                              # Download and use Add-Shift.fptest (default)
   %(prog)s --files Add-Shift.fptest     # Use specific file(s)
   %(prog)s --all                        # Use all available test files
+  %(prog)s --all --split                # Generate separate files per test source
   %(prog)s --list                       # List available test files
   %(prog)s --local test.fptest          # Use a local file instead of downloading
         """
@@ -615,6 +687,16 @@ Examples:
         help='Output Noir file (default: ieee754_tests.nr)'
     )
     parser.add_argument(
+        '--output-dir',
+        default=None,
+        help='Output directory for split test files (use with --split)'
+    )
+    parser.add_argument(
+        '--split',
+        action='store_true',
+        help='Generate separate test files for each source file'
+    )
+    parser.add_argument(
         '--operation',
         choices=['add', 'sub', 'mul', 'div', 'all'],
         default='add',
@@ -630,7 +712,7 @@ Examples:
         '--max-tests',
         type=int,
         default=None,
-        help='Maximum number of tests to generate'
+        help='Maximum number of tests to generate (per file when using --split)'
     )
     parser.add_argument(
         '--debug',
@@ -705,45 +787,77 @@ Examples:
     if not fptest_files:
         parser.error('No .fptest files found')
     
-    # Parse all test files
-    all_tests = []
-    for filepath in fptest_files:
-        print(f"Parsing {os.path.basename(filepath)}...")
-        tests = parse_fptest_file(filepath)
-        all_tests.extend(tests)
+    # Define filter functions
+    def filter_tests(tests: list[TestCase]) -> list[TestCase]:
+        result = tests
+        
+        # Filter by operation
+        if args.operation != 'all':
+            op_map = {
+                'add': Operation.ADD,
+                'sub': Operation.SUBTRACT,
+                'mul': Operation.MULTIPLY,
+                'div': Operation.DIVIDE,
+            }
+            target_op = op_map[args.operation]
+            result = [t for t in result if t.operation == target_op]
+        
+        # Filter by precision
+        if args.precision != 'all':
+            target_precision = Precision.BINARY32 if args.precision == 'f32' else Precision.BINARY64
+            result = [t for t in result if t.precision == target_precision]
+        
+        # Apply max tests limit
+        if args.max_tests and len(result) > args.max_tests:
+            result = result[:args.max_tests]
+        
+        return result
     
-    print(f"Parsed {len(all_tests)} total test cases")
-    
-    # Filter by operation
-    if args.operation != 'all':
-        op_map = {
-            'add': Operation.ADD,
-            'sub': Operation.SUBTRACT,
-            'mul': Operation.MULTIPLY,
-            'div': Operation.DIVIDE,
-        }
-        target_op = op_map[args.operation]
-        all_tests = [t for t in all_tests if t.operation == target_op]
-        print(f"Filtered to {len(all_tests)} {args.operation} tests")
-    
-    # Filter by precision
-    if args.precision != 'all':
-        target_precision = Precision.BINARY32 if args.precision == 'f32' else Precision.BINARY64
-        all_tests = [t for t in all_tests if t.precision == target_precision]
-        print(f"Filtered to {len(all_tests)} {args.precision} tests")
-    
-    # Apply max tests limit
-    if args.max_tests and len(all_tests) > args.max_tests:
-        all_tests = all_tests[:args.max_tests]
-        print(f"Limited to {len(all_tests)} tests")
-    
-    # Generate Noir file
-    generate_noir_file(
-        all_tests,
-        args.output,
-        [os.path.basename(f) for f in fptest_files],
-        add_debug=args.debug
-    )
+    if args.split:
+        # Generate separate files per source
+        output_dir = args.output_dir or "src/ieee754_tests"
+        os.makedirs(output_dir, exist_ok=True)
+        
+        tests_by_file = {}
+        total_parsed = 0
+        
+        for filepath in fptest_files:
+            source_name = os.path.basename(filepath)
+            print(f"Parsing {source_name}...")
+            tests = parse_fptest_file(filepath)
+            total_parsed += len(tests)
+            filtered = filter_tests(tests)
+            if filtered:
+                tests_by_file[source_name] = filtered
+                print(f"  {len(tests)} parsed, {len(filtered)} after filtering")
+        
+        print(f"\nParsed {total_parsed} total test cases")
+        
+        results = generate_noir_file_per_source(tests_by_file, output_dir, add_debug=args.debug)
+        
+        total_generated = sum(results.values())
+        print(f"\nTotal: {total_generated} tests generated across {len(results)} files")
+        
+    else:
+        # Parse all test files into one list
+        all_tests = []
+        for filepath in fptest_files:
+            print(f"Parsing {os.path.basename(filepath)}...")
+            tests = parse_fptest_file(filepath)
+            all_tests.extend(tests)
+        
+        print(f"Parsed {len(all_tests)} total test cases")
+        
+        all_tests = filter_tests(all_tests)
+        print(f"After filtering: {len(all_tests)} tests")
+        
+        # Generate Noir file
+        generate_noir_file(
+            all_tests,
+            args.output,
+            [os.path.basename(f) for f in fptest_files],
+            add_debug=args.debug
+        )
 
 
 if __name__ == '__main__':
