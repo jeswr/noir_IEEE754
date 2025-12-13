@@ -27,9 +27,11 @@ jobs:
 
       - name: Read test matrix
         id: matrix
+        shell: bash
         run: |
+          set +e  # Disable errexit temporarily
           echo "Debug: checking for test-matrix.json"
-          ls -la .github/ || echo "Failed to list .github/"
+          ls -la .github/
           if [ ! -f .github/test-matrix.json ]; then
             echo "Error: test-matrix.json not found"
             exit 1
@@ -37,10 +39,15 @@ jobs:
           echo "Debug: reading test-matrix.json"
           cat .github/test-matrix.json | head -20
           echo "Debug: checking jq version"
-          jq --version || echo "jq not found"
+          jq --version
           echo "Debug: running jq"
-          jq -c '.groups' .github/test-matrix.json > /tmp/groups.json 2>&1 || { echo "jq failed"; cat /tmp/groups.json; exit 1; }
-          GROUPS=$(cat /tmp/groups.json)
+          GROUPS=$(jq -c '.groups' .github/test-matrix.json)
+          JQ_EXIT=$?
+          echo "Debug: jq exit code = $JQ_EXIT"
+          if [ $JQ_EXIT -ne 0 ]; then
+            echo "jq failed with exit code $JQ_EXIT"
+            exit 1
+          fi
           echo "Debug: GROUPS length = ${#GROUPS}"
           echo "groups=$GROUPS" >> $GITHUB_OUTPUT
           echo "Test groups: $(jq '.groups | length' .github/test-matrix.json) groups"
