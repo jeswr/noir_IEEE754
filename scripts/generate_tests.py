@@ -544,9 +544,10 @@ use crate::float::{{
 def generate_noir_file_per_source(
     tests_by_file: dict[str, list[TestCase]], 
     output_dir: str, 
-    add_debug: bool = False
+    add_debug: bool = False,
+    chunk_size: int = 25
 ) -> dict[str, int]:
-    """Generate separate Noir test files for each source file."""
+    """Generate separate Noir test files for each source file, chunked into groups."""
     
     results = {}
     module_names = []
@@ -557,11 +558,26 @@ def generate_noir_file_per_source(
         # Convert to valid Noir module name (lowercase, underscores)
         module_name = "test_" + re.sub(r'[^a-zA-Z0-9]', '_', base_name).lower()
         
-        output_path = os.path.join(output_dir, f"{module_name}.nr")
+        # Generate all test code first
+        all_test_code = []
+        test_index = 0
         
-        # Header
-        header = f"""// Auto-generated IEEE 754 test cases
-// Generated from: {source_file}
+        for test in tests:
+            code = generate_noir_test(test, test_index, add_debug)
+            if code:
+                all_test_code.append(code)
+                test_index += 1
+        
+        if not all_test_code:
+            continue
+        
+        # Create folder for this test source (only if we have tests)
+        module_dir = os.path.join(output_dir, module_name)
+        os.makedirs(module_dir, exist_ok=True)
+        
+        # Header template for each chunk file
+        header_template = """// Auto-generated IEEE 754 test cases
+// Generated from: {source_file} (chunk {chunk_num})
 // Test suite source: https://github.com/sergev/ieee754-test-suite
 
 use crate::float::{{
@@ -573,31 +589,38 @@ use crate::float::{{
 
 """
         
-        # Generate tests
-        test_code = []
-        test_index = 0
+        # Chunk the tests
+        chunks = [all_test_code[i:i + chunk_size] for i in range(0, len(all_test_code), chunk_size)]
+        chunk_names = []
         
-        for test in tests:
-            code = generate_noir_test(test, test_index, add_debug)
-            if code:
-                test_code.append(code)
-                test_index += 1
-        
-        if test_code:
-            # Write output
-            with open(output_path, 'w') as f:
-                f.write(header)
-                f.write('\n'.join(test_code))
+        for chunk_idx, chunk in enumerate(chunks):
+            chunk_name = f"chunk_{chunk_idx:04d}"
+            chunk_names.append(chunk_name)
+            chunk_path = os.path.join(module_dir, f"{chunk_name}.nr")
             
-            print(f"Generated {len(test_code)} tests to {output_path}")
-            results[source_file] = len(test_code)
-            module_names.append(module_name)  # Only add if we actually generated tests
+            header = header_template.format(source_file=source_file, chunk_num=chunk_idx)
+            
+            with open(chunk_path, 'w') as f:
+                f.write(header)
+                f.write('\n'.join(chunk))
+        
+        # Generate mod.nr for this module folder
+        module_mod_path = os.path.join(module_dir, "mod.nr")
+        with open(module_mod_path, 'w') as f:
+            f.write(f"// Auto-generated module index for {source_file}\n")
+            f.write(f"// Contains {len(all_test_code)} tests in {len(chunks)} chunks of {chunk_size}\n\n")
+            for chunk_name in chunk_names:
+                f.write(f"mod {chunk_name};\n")
+        
+        print(f"Generated {len(all_test_code)} tests in {len(chunks)} chunks to {module_dir}/")
+        results[source_file] = len(all_test_code)
+        module_names.append(module_name)
     
-    # Generate module index file
+    # Generate top-level module index file
     index_path = os.path.join(output_dir, "mod.nr")
     with open(index_path, 'w') as f:
         f.write("// Auto-generated module index for IEEE 754 tests\n")
-        f.write("// Each test file corresponds to a source .fptest file\n\n")
+        f.write("// Each module corresponds to a source .fptest file\n\n")
         for module_name in sorted(module_names):
             f.write(f"mod {module_name};\n")
     
@@ -654,7 +677,8 @@ Examples:
   %(prog)s                              # Download and use Add-Shift.fptest (default)
   %(prog)s --files Add-Shift.fptest     # Use specific file(s)
   %(prog)s --all                        # Use all available test files
-  %(prog)s --all --split                # Generate separate files per test source
+  %(prog)s --all --split                # Generate chunked test folders per source
+  %(prog)s --all --split --chunk-size 50  # Use 50 tests per chunk file
   %(prog)s --list                       # List available test files
   %(prog)s --local test.fptest          # Use a local file instead of downloading
         """
@@ -695,6 +719,12 @@ Examples:
         '--split',
         action='store_true',
         help='Generate separate test files for each source file'
+    )
+    parser.add_argument(
+        '--chunk-size',
+        type=int,
+        default=25,
+        help='Number of tests per chunk file when using --split (default: 25)'
     )
     parser.add_argument(
         '--operation',
@@ -833,7 +863,12 @@ Examples:
         
         print(f"\nParsed {total_parsed} total test cases")
         
-        results = generate_noir_file_per_source(tests_by_file, output_dir, add_debug=args.debug)
+        results = generate_noir_file_per_source(
+            tests_by_file, 
+            output_dir, 
+            add_debug=args.debug,
+            chunk_size=args.chunk_size
+        )
         
         total_generated = sum(results.values())
         print(f"\nTotal: {total_generated} tests generated across {len(results)} files")
