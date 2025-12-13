@@ -36,18 +36,19 @@ jobs:
             echo "Error: test-matrix.json not found"
             exit 1
           fi
-          echo "Debug: reading test-matrix.json"
-          cat .github/test-matrix.json | head -20
-          echo "Debug: checking jq version"
-          jq --version
-          echo "Debug: running jq"
-          GROUPS=$(jq -c '.groups' .github/test-matrix.json)
+          echo "Debug: file size:"
+          wc -c .github/test-matrix.json
+          echo "Debug: jq direct output:"
+          jq -c '.groups' .github/test-matrix.json
           JQ_EXIT=$?
           echo "Debug: jq exit code = $JQ_EXIT"
           if [ $JQ_EXIT -ne 0 ]; then
             echo "jq failed with exit code $JQ_EXIT"
+            echo "File contents:"
+            cat .github/test-matrix.json
             exit 1
           fi
+          GROUPS=$(jq -c '.groups' .github/test-matrix.json)
           echo "Debug: GROUPS length = ${#GROUPS}"
           echo "groups=$GROUPS" >> $GITHUB_OUTPUT
           echo "Test groups: $(jq '.groups | length' .github/test-matrix.json) groups"
