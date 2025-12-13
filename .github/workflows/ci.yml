@@ -28,12 +28,16 @@ jobs:
       - name: Read test matrix
         id: matrix
         run: |
+          echo "Debug: checking for test-matrix.json"
+          ls -la .github/ || echo "Failed to list .github/"
           if [ ! -f .github/test-matrix.json ]; then
             echo "Error: test-matrix.json not found"
-            ls -la .github/
             exit 1
           fi
+          echo "Debug: reading test-matrix.json"
+          cat .github/test-matrix.json | head -20
           GROUPS=$(jq -c '.groups' .github/test-matrix.json)
+          echo "Debug: GROUPS length = ${#GROUPS}"
           echo "groups=$GROUPS" >> $GITHUB_OUTPUT
           echo "Test groups: $(jq '.groups | length' .github/test-matrix.json) groups"
 
