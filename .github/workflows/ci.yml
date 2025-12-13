@@ -29,17 +29,19 @@ jobs:
         id: matrix
         shell: bash
         run: |
+          set -x  # Enable debugging
+          ls -la .github/
           if [ ! -f .github/test-matrix.json ]; then
             echo "Error: test-matrix.json not found"
             exit 1
           fi
+          cat .github/test-matrix.json
           # Write compact JSON to file first to avoid any shell escaping issues
           jq -c '.groups' .github/test-matrix.json > /tmp/groups.json
           # Read it back and set as output
           GROUPS=$(cat /tmp/groups.json)
-          echo "groups=$GROUPS" >> $GITHUB_OUTPUT
+          echo "groups=${GROUPS}" >> $GITHUB_OUTPUT
           echo "Test groups: $(jq '.groups | length' .github/test-matrix.json) groups"
-          echo "GROUPS first 100 chars: ${GROUPS:0:100}"
 
       - name: Upload generated tests
         uses: actions/upload-artifact@v4
