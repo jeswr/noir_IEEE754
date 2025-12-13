@@ -5,6 +5,7 @@
 target/
 
 src/ieee754_tests/
+scripts/__pycache__/
 
 # OS files
 .DS_Store

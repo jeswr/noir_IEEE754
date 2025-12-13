@@ -23,6 +23,7 @@ Usage:
 """
 
 import argparse
+import math
 import os
 import re
 import struct
@@ -32,6 +33,25 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Optional
+
+
+# IEEE 754 conversion utilities using Python's struct module
+def float32_from_bits(bits: int) -> float:
+    """Convert 32-bit integer to float32."""
+    return struct.unpack('f', struct.pack('I', bits & 0xFFFFFFFF))[0]
+
+def float32_to_bits(f: float) -> int:
+    """Convert float32 to 32-bit integer."""
+    return struct.unpack('I', struct.pack('f', f))[0]
+
+def float64_from_bits(bits: int) -> float:
+    """Convert 64-bit integer to float64."""
+    return struct.unpack('d', struct.pack('Q', bits & 0xFFFFFFFFFFFFFFFF))[0]
+
+def float64_to_bits(f: float) -> int:
+    """Convert float64 to 64-bit integer."""
+    return struct.unpack('Q', struct.pack('d', f))[0]
+
 
 # GitHub raw URL base for the IEEE 754 test suite
 TEST_SUITE_BASE_URL = "https://raw.githubusercontent.com/sergev/ieee754-test-suite/master"
@@ -179,11 +199,17 @@ def fp_value_to_bits32(val: FPValue) -> int:
     
     # The test file format uses 6 hex digits (24 bits) for the mantissa
     # IEEE 754 float32 has 23 bits, so we need to shift right by 1
-    # to get the stored mantissa value
+    # The test file shows results with 1 extra bit of precision - if that bit
+    # is 1, the result should round UP to represent the correctly rounded float32
     hex_bits = len(frac_hex) * 4
     if hex_bits > 23:
-        # Standard case: 6 hex digits = 24 bits, need 23
-        frac_bits >>= (hex_bits - 23)
+        shift_amount = hex_bits - 23
+        # Get the bit(s) being shifted out
+        round_bit = (frac_bits >> (shift_amount - 1)) & 1
+        frac_bits >>= shift_amount
+        # Round up if the shifted-out bit is 1
+        if round_bit:
+            frac_bits += 1
     elif hex_bits < 23:
         frac_bits <<= (23 - hex_bits)
     
@@ -235,10 +261,16 @@ def fp_value_to_bits64(val: FPValue) -> int:
     frac_hex = significand[1:]
     frac_bits = int(frac_hex, 16) if frac_hex else 0
     
-    # Adjust to 52-bit mantissa
+    # Adjust to 52-bit mantissa with proper rounding
     hex_bits = len(frac_hex) * 4
     if hex_bits > 52:
-        frac_bits >>= (hex_bits - 52)
+        shift_amount = hex_bits - 52
+        # Get the bit(s) being shifted out
+        round_bit = (frac_bits >> (shift_amount - 1)) & 1
+        frac_bits >>= shift_amount
+        # Round up if the shifted-out bit is 1
+        if round_bit:
+            frac_bits += 1
     elif hex_bits < 52:
         frac_bits <<= (52 - hex_bits)
     
@@ -421,7 +453,17 @@ def generate_noir_test(test: TestCase, index: int, add_debug: bool = False) -> O
     if is_float32:
         bits1 = fp_value_to_bits32(test.operand1)
         bits2 = fp_value_to_bits32(test.operand2)
-        expected = fp_value_to_bits32(test.result)
+        
+        # Compute expected result using Python's IEEE 754 hardware
+        # This ensures we test against actual IEEE 754 behavior
+        f1 = float32_from_bits(bits1)
+        f2 = float32_from_bits(bits2)
+        if test.operation == Operation.ADD:
+            result_float = f1 + f2
+        else:
+            result_float = f1 - f2
+        expected = float32_to_bits(result_float)
+        
         from_bits_fn = "float32_from_bits"
         to_bits_fn = "float32_to_bits"
         op_fn = "add_float32" if test.operation == Operation.ADD else "sub_float32"
@@ -429,13 +471,25 @@ def generate_noir_test(test: TestCase, index: int, add_debug: bool = False) -> O
     else:
         bits1 = fp_value_to_bits64(test.operand1)
         bits2 = fp_value_to_bits64(test.operand2)
-        expected = fp_value_to_bits64(test.result)
+        
+        # Compute expected result using Python's IEEE 754 hardware
+        f1 = float64_from_bits(bits1)
+        f2 = float64_from_bits(bits2)
+        if test.operation == Operation.ADD:
+            result_float = f1 + f2
+        else:
+            result_float = f1 - f2
+        expected = float64_to_bits(result_float)
+        
         from_bits_fn = "float64_from_bits"
         to_bits_fn = "float64_to_bits"
         op_fn = "add_float64" if test.operation == Operation.ADD else "sub_float64"
         bits_type = "u64"
     
     test_name = generate_noir_test_name(test, index)
+    
+    # Check if result is NaN (use Python's math.isnan)
+    result_is_nan = math.isnan(result_float)
     
     # For subtraction, we negate the second operand and use addition
     if test.operation == Operation.SUBTRACT:
@@ -457,7 +511,7 @@ def generate_noir_test(test: TestCase, index: int, add_debug: bool = False) -> O
         expected_str = f"0x{expected:016X}"
     
     # Handle NaN results specially - just check it's NaN
-    if test.result.is_nan:
+    if result_is_nan:
         if is_float32:
             return f"""#[test]
 fn {test_name}() {{

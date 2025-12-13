@@ -256,11 +256,10 @@ pub fn add_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     }
 
     // Check for underflow to denormal or zero
+    // If result_exp == 1 and result_mant < normal_position, the result is naturally
+    // denormal (no implicit bit present), so we just set exp = 0 without shifting.
     let mut is_denormal_result = false;
     if (result_exp == 0) | ((result_exp == 1) & (result_mant < normal_position)) {
-        if result_exp == 1 {
-            result_mant = result_mant >> 1;
-        }
         result_exp = 0;
         is_denormal_result = true;
     }

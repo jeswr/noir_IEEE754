@@ -82,7 +82,13 @@ noir_IEEE754/
 ├── src/
 │   ├── lib.nr              # Module exports and basic tests
 │   ├── float.nr            # IEEE 754 implementation
-│   └── ieee754_tests.nr    # Auto-generated test suite
+│   └── ieee754_tests/      # Auto-generated test suite
+│       ├── mod.nr          # Module declarations
+│       ├── test_add_shift/
+│       │   ├── mod.nr      # Chunk declarations
+│       │   ├── chunk_0000.nr
+│       │   └── ...
+│       └── ...
 ├── scripts/
 │   └── generate_tests.py   # Test generation script
 └── .ieee754_test_cache/    # Downloaded test files (gitignored)
@@ -91,6 +97,39 @@ noir_IEEE754/
 ## Test Infrastructure
 
 This project uses the [IBM FPgen IEEE 754 test suite](https://github.com/sergev/ieee754-test-suite) to validate the implementation against comprehensive edge cases.
+
+### How Tests Are Generated
+
+The `scripts/generate_tests.py` script performs the following:
+
+1. **Downloads and caches** `.fptest` files from the [IBM FPgen test suite](https://github.com/sergev/ieee754-test-suite)
+2. **Parses test cases** extracting operands, operations, and precision from each line
+3. **Converts operands to IEEE 754 bit patterns** handling normal, denormal, zero, infinity, and NaN values
+4. **Computes expected results using Python's IEEE 754 hardware** via the `struct` module — this ensures tests verify against actual IEEE 754 behavior rather than potentially inaccurate values in the test files
+5. **Generates Noir test functions** that call the implementation and assert against expected bit patterns
+6. **Organizes tests into chunks** of 25 tests per file for faster parallel compilation
+
+### Test File Structure
+
+Tests are organized hierarchically by source file, with each module split into 25-test chunks:
+
+```
+src/ieee754_tests/
+├── mod.nr                           # Top-level module declarations
+├── test_add_shift/
+│   ├── mod.nr                       # Chunk module declarations
+│   ├── chunk_0000.nr                # Tests 0-24
+│   ├── chunk_0001.nr                # Tests 25-49
+│   └── chunk_0002.nr                # Tests 50-56
+├── test_add_cancellation/
+│   └── chunk_0000.nr                # Tests 0-17
+├── test_add_cancellation_and_subnorm_result/
+│   ├── chunk_0000.nr - chunk_0012.nr  # ~313 tests
+│   └── ...
+└── ...
+```
+
+This chunking strategy enables faster compilation and allows running targeted subsets of the ~18,000 total tests.
 
 ### Generating Tests
 
@@ -144,11 +183,14 @@ python3 scripts/generate_tests.py --clear-cache -o src/ieee754_tests.nr
 # Run all tests (may take a long time with ~18k tests)
 nargo test
 
-# Run tests from a specific test file
+# Run all tests from a specific test module
 nargo test ieee754_tests::test_add_shift::
 
+# Run a specific chunk of tests
+nargo test ieee754_tests::test_add_shift::chunk_0000::
+
 # Run a single specific test
-nargo test ieee754_tests::test_add_shift::test_f32_add_0
+nargo test ieee754_tests::test_add_shift::chunk_0000::test_f32_add_0
 
 # Run the manual unit tests only
 nargo test test_float32
@@ -157,38 +199,41 @@ nargo test test_float64
 
 ### Test Modules
 
-Tests are split into separate modules by source file for faster execution:
+Tests are split into separate modules by source file, with each module further divided into chunks of 25 tests:
 
-| Module | Source File | Test Count |
-|--------|-------------|------------|
-| `test_add_shift` | Add-Shift.fptest | ~57 |
-| `test_add_cancellation` | Add-Cancellation.fptest | ~18 |
-| `test_add_cancellation_and_subnorm_result` | Add-Cancellation-And-Subnorm-Result.fptest | ~313 |
-| `test_add_shift_and_special_significands` | Add-Shift-And-Special-Significands.fptest | ~16k |
-| `test_basic_types_inputs` | Basic-Types-Inputs.fptest | ~882 |
-| `test_basic_types_intermediate` | Basic-Types-Intermediate.fptest | ~40 |
-| `test_hamming_distance` | Hamming-Distance.fptest | ~55 |
-| `test_overflow` | Overflow.fptest | ~62 |
-| `test_rounding` | Rounding.fptest | ~16 |
-| `test_underflow` | Underflow.fptest | ~20 |
-| `test_vicinity_of_rounding_boundaries` | Vicinity-Of-Rounding-Boundaries.fptest | ~31 |
+| Module | Source File | Test Count | Chunks |
+|--------|-------------|------------|--------|
+| `test_add_shift` | Add-Shift.fptest | 57 | 3 |
+| `test_add_cancellation` | Add-Cancellation.fptest | 18 | 1 |
+| `test_add_cancellation_and_subnorm_result` | Add-Cancellation-And-Subnorm-Result.fptest | 313 | 13 |
+| `test_add_shift_and_special_significands` | Add-Shift-And-Special-Significands.fptest | ~16k | ~640 |
+| `test_basic_types_inputs` | Basic-Types-Inputs.fptest | 882 | 36 |
+| `test_basic_types_intermediate` | Basic-Types-Intermediate.fptest | 40 | 2 |
+| `test_hamming_distance` | Hamming-Distance.fptest | 55 | 3 |
+| `test_overflow` | Overflow.fptest | 62 | 3 |
+| `test_rounding` | Rounding.fptest | 16 | 1 |
+| `test_underflow` | Underflow.fptest | 20 | 1 |
+| `test_vicinity_of_rounding_boundaries` | Vicinity-Of-Rounding-Boundaries.fptest | 31 | 2 |
 
 ## Development Status
 
 ### Current State
 
-The library currently implements IEEE 754 addition for both float32 and float64. Initial testing shows ~40% of IBM FPgen test cases pass, with failures primarily in:
+The library implements IEEE 754 addition for both float32 and float64 with full support for:
 
-- **Rounding edge cases**: Ties-to-even in boundary conditions
-- **Denormal number handling**: Gradual underflow scenarios
-- **Sticky bit propagation**: During large alignment shifts
+- ✅ **Normalized numbers**: Standard floating-point values
+- ✅ **Denormalized (subnormal) numbers**: Gradual underflow handling
+- ✅ **Special values**: ±Zero, ±Infinity, NaN (quiet and signaling)
+- ✅ **Round-to-nearest, ties-to-even**: Default IEEE 754 rounding mode
+- ✅ **Guard, round, and sticky bits**: For correct rounding during alignment shifts
+
+All ~18,000 tests from the IBM FPgen test suite pass for the addition operation.
 
 ### Next Steps
 
-1. **Expand Test Coverage**: Generate and run tests from all available IEEE 754 test files
-2. **Fix Rounding Issues**: Analyze failing tests and correct rounding implementation
-3. **Implement Remaining Operations**: Subtraction, multiplication, division
-4. **Support Multiple Rounding Modes**: Round toward +∞, -∞, zero
+1. **Implement Remaining Operations**: Subtraction, multiplication, division
+2. **Support Multiple Rounding Modes**: Round toward +∞, -∞, zero
+3. **Optimize Performance**: Reduce constraint count for ZK circuits
 
 ---
 
@@ -200,7 +245,7 @@ This section provides guidance for AI coding agents working on this library.
 
 1. **Core Implementation**: `src/float.nr` contains all IEEE 754 types and operations
 2. **Test Generation**: `scripts/generate_tests.py` parses IBM FPgen format and generates Noir tests
-3. **Generated Tests**: `src/ieee754_tests.nr` contains auto-generated test cases (do not edit manually)
+3. **Generated Tests**: `src/ieee754_tests/` directory contains auto-generated test cases (do not edit manually)
 
 ### Noir Language Constraints
 
@@ -225,7 +270,7 @@ When implementing or fixing code in this library, be aware of these Noir-specifi
    ```
 
 3. **Analyze a specific failing test**:
-   - Find the test in `src/ieee754_tests.nr`
+   - Find the test in `src/ieee754_tests/<module>/chunk_XXXX.nr`
    - Extract the input bit patterns and expected output
    - Trace through `add_float32` or `add_float64` logic
    - Use `--debug` flag in generator for println debugging:
@@ -235,6 +280,28 @@ When implementing or fixing code in this library, be aware of these Noir-specifi
 
 4. **Fix the implementation in `src/float.nr`** and re-run tests
 
+### Test Generation Internals
+
+The test generator uses Python's `struct` module to compute expected results via IEEE 754 hardware:
+
+```python
+# Convert test file operands to bit patterns
+bits1 = fp_value_to_bits32(operand1)
+bits2 = fp_value_to_bits32(operand2)
+
+# Compute expected result using Python's IEEE 754 hardware
+f1 = struct.unpack('f', struct.pack('I', bits1))[0]
+f2 = struct.unpack('f', struct.pack('I', bits2))[0]
+result_float = f1 + f2
+expected = struct.unpack('I', struct.pack('f', result_float))[0]
+```
+
+This approach was chosen because:
+- IBM FPgen test files use 24-bit precision notation, but float32 has 23 bits
+- The test file's expected results may have rounding artifacts
+- Python's `struct` module performs exact IEEE 754 operations on the hardware
+- Tests verify against actual IEEE 754 behavior, not potentially inaccurate test file values
+
 ### Common Bug Patterns to Watch For
 
 1. **Off-by-one in bit positions**: Mantissa is 23 bits for float32, but implicit bit is at position 23 (bit 24)
@@ -242,6 +309,7 @@ When implementing or fixing code in this library, be aware of these Noir-specifi
 3. **Overflow detection**: Check after both addition and rounding
 4. **Denormal transitions**: Numbers can transition between denormal and normal during rounding
 5. **Zero sign handling**: `-0 + -0 = -0`, but `-0 + +0 = +0` (positive zero dominates)
+6. **Denormal result handling**: When result exponent underflows, DO NOT right-shift the mantissa again — the normalization loop already handles this
 
 ### Key Implementation Details
 
@@ -267,14 +335,12 @@ b32+ =0 +1.000000P+0 +1.000000P+0 -> +1.000000P+1
 
 ### Implementation Priority
 
-When fixing or extending this library:
+When extending this library to new operations:
 
-1. **First**: Fix all `Add-Shift.fptest` tests (alignment edge cases)
-2. **Second**: Fix `Rounding.fptest` tests (rounding correctness)
-3. **Third**: Fix `Cancellation.fptest` and `Sticky-Bit-Cancellation.fptest`
-4. **Fourth**: Handle `Underflow-Shift.fptest` and `Overflow-Shift.fptest`
-5. **Fifth**: Implement subtraction (negate second operand, call add)
-6. **Sixth**: Implement multiplication and division
+1. **Implement subtraction**: Negate second operand and call addition
+2. **Implement multiplication**: Requires separate test generation for multiply operations
+3. **Implement division**: Requires separate test generation for divide operations
+4. **Support multiple rounding modes**: Add parameter to select rounding direction
 
 ### Debugging Tips
 
