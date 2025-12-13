@@ -426,29 +426,64 @@ fn {test_name}() {{
 """
 
 
-# Common header for generated Noir test files
-NOIR_TEST_HEADER = """// Auto-generated IEEE 754 test cases
+def analyze_test_code(test_code: list[str]) -> tuple[bool, bool, bool, bool, bool, bool]:
+    """Analyze test code to determine which imports are needed.
+    
+    Returns: (has_float32, has_float64, has_float32_to_bits, has_float64_to_bits, has_float32_nan, has_float64_nan)
+    """
+    code_str = "\n".join(test_code)
+    has_float32 = "add_float32" in code_str
+    has_float64 = "add_float64" in code_str
+    has_float32_to_bits = "float32_to_bits" in code_str
+    has_float64_to_bits = "float64_to_bits" in code_str
+    has_float32_nan = "float32_is_nan" in code_str
+    has_float64_nan = "float64_is_nan" in code_str
+    return has_float32, has_float64, has_float32_to_bits, has_float64_to_bits, has_float32_nan, has_float64_nan
+
+
+def generate_noir_header_from_analysis(source_info: str, analysis: tuple) -> str:
+    """Generate Noir test file header with only required imports."""
+    has_float32, has_float64, has_float32_to_bits, has_float64_to_bits, has_float32_nan, has_float64_nan = analysis
+    imports = []
+    
+    if has_float32:
+        imports.append("add_float32")
+        imports.append("float32_from_bits")
+    if has_float32_to_bits:
+        imports.append("float32_to_bits")
+    if has_float32_nan:
+        imports.append("float32_is_nan")
+    
+    if has_float64:
+        imports.append("add_float64")
+        imports.append("float64_from_bits")
+    if has_float64_to_bits:
+        imports.append("float64_to_bits")
+    if has_float64_nan:
+        imports.append("float64_is_nan")
+    
+    # Sort imports for consistency
+    imports.sort()
+    imports_str = ", ".join(imports)
+    
+    return f"""// Auto-generated IEEE 754 test cases
 // Generated from: {source_info}
 // Test suite source: https://github.com/sergev/ieee754-test-suite
 
-use crate::float::{{
-    IEEE754Float32, IEEE754Float64,
-    float32_from_bits, float32_to_bits, float32_is_nan,
-    float64_from_bits, float64_to_bits, float64_is_nan,
-    add_float32, add_float64,
-}};
+use crate::float::{{{imports_str}}};
 
 """
 
 
 def generate_noir_file(tests: list[TestCase], output_path: str, source_files: list[str], add_debug: bool = False):
     """Generate a complete Noir test file from test cases."""
-    header = NOIR_TEST_HEADER.format(source_info=', '.join(source_files))
-    
     test_code = [
         code for i, test in enumerate(tests)
         if (code := generate_noir_test(test, i, add_debug))
     ]
+    
+    analysis = analyze_test_code(test_code)
+    header = generate_noir_header_from_analysis(', '.join(source_files), analysis)
     
     with open(output_path, 'w') as f:
         f.write(header)
@@ -496,7 +531,10 @@ def generate_noir_file_per_source(
         for chunk_idx, chunk in enumerate(chunks):
             chunk_name = f"chunk_{chunk_idx:04d}"
             chunk_names.append(chunk_name)
-            header = NOIR_TEST_HEADER.format(source_info=f"{source_file} (chunk {chunk_idx})")
+            
+            # Analyze this chunk to determine required imports
+            analysis = analyze_test_code(chunk)
+            header = generate_noir_header_from_analysis(f"{source_file} (chunk {chunk_idx})", analysis)
             
             with open(os.path.join(module_dir, f"{chunk_name}.nr"), 'w') as f:
                 f.write(header)

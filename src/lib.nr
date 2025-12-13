@@ -5,20 +5,8 @@ use crate::float::{
     add_float32, add_float64, float32_from_bits, float32_infinity, float32_is_infinity,
     float32_is_nan, float32_is_zero, float32_nan, float32_to_bits, float32_zero, float64_from_bits,
     float64_infinity, float64_is_infinity, float64_is_nan, float64_is_zero, float64_nan,
-    float64_to_bits, float64_zero, IEEE754Float32, IEEE754Float64,
+    float64_to_bits, float64_zero,
 };
-
-fn not_equal(x: Field, y: Field) -> bool {
-    x != y
-}
-
-#[test]
-fn test_not_equal() {
-    assert(not_equal(1, 2));
-
-    // Uncomment to make test fail
-    // assert(not_equal(1, 1));
-}
 
 // ============================================================================
 // IEEE 754 Float32 Tests
