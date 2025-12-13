@@ -367,7 +367,6 @@ fn verify_add_float32_result(a: IEEE754Float32, b: IEEE754Float32, result: IEEE7
     let b_is_zero = float32_is_zero(b);
     let result_is_nan = float32_is_nan(result);
     let result_is_inf = float32_is_infinity(result);
-    let result_is_zero = float32_is_zero(result);
 
     // NaN propagation: NaN + anything = NaN
     if a_is_nan | b_is_nan {
@@ -970,6 +969,7 @@ fn verify_mul_float32_result(a: IEEE754Float32, b: IEEE754Float32, result: IEEE7
 
 // IEEE 754 compliant multiplication for 32-bit floats
 pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
+    // Safety: mul_float32_hint computes the multiplication and the result is verified by verify_mul_float32_result
     let result = unsafe { mul_float32_hint(a, b) };
     verify_mul_float32_result(a, b, result);
     result
@@ -1273,6 +1273,7 @@ fn verify_mul_float64_result(a: IEEE754Float64, b: IEEE754Float64, result: IEEE7
 
 // IEEE 754 compliant multiplication for 64-bit floats
 pub fn mul_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
+    // Safety: mul_float64_hint computes the multiplication and the result is verified by verify_mul_float64_result
     let result = unsafe { mul_float64_hint(a, b) };
     verify_mul_float64_result(a, b, result);
     result
@@ -1561,6 +1562,7 @@ fn verify_div_float32_result(a: IEEE754Float32, b: IEEE754Float32, result: IEEE7
 
 // IEEE 754 compliant division for 32-bit floats
 pub fn div_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
+    // Safety: div_float32_hint computes the division and the result is verified by verify_div_float32_result
     let result = unsafe { div_float32_hint(a, b) };
     verify_div_float32_result(a, b, result);
     result
@@ -1860,6 +1862,7 @@ fn verify_div_float64_result(a: IEEE754Float64, b: IEEE754Float64, result: IEEE7
 
 // IEEE 754 compliant division for 64-bit floats
 pub fn div_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
+    // Safety: div_float64_hint computes the division and the result is verified by verify_div_float64_result
     let result = unsafe { div_float64_hint(a, b) };
     verify_div_float64_result(a, b, result);
     result
