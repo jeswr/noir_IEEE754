@@ -16,7 +16,7 @@ jobs:
         noir-version: ["1.0.0-beta.16", "1.0.0-beta.15", "1.0.0-beta.14"]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Noir
         uses: noir-lang/noirup@v0.1.4
@@ -63,7 +63,7 @@ jobs:
     name: test (${{ matrix.noir-version }}, ${{ matrix.group.name }})
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Noir
         uses: noir-lang/noirup@v0.1.4
@@ -84,10 +84,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
