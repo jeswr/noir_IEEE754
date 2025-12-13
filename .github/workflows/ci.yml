@@ -106,11 +106,27 @@ jobs:
 
       - name: Run tests - ${{ matrix.group.name }}
         run: |
-          # Run each pattern in the group
-          for pattern in ${{ matrix.group.pattern }}; do
-            echo "Running tests matching: $pattern"
-            nargo test "$pattern" || exit 1
-          done
+          MODULE="${{ matrix.group.module }}"
+          START=${{ matrix.group.start }}
+          END=${{ matrix.group.end }}
+          
+          if [ "$MODULE" = "_unit_" ]; then
+            # Run unit tests
+            echo "Running unit tests"
+            nargo test test_float32 || exit 1
+            nargo test test_float64 || exit 1
+          elif [ "$START" = "0" ] && [ "$END" -gt "50" ] || [ "$((END - START))" -gt "50" ]; then
+            # Large range - run whole module (shouldn't happen with current grouping)
+            echo "Running all tests in module: $MODULE"
+            nargo test "ieee754_tests::${MODULE}::" || exit 1
+          else
+            # Run specific chunk range
+            for i in $(seq $START $((END - 1))); do
+              CHUNK=$(printf "chunk_%04d" $i)
+              echo "Running tests: ieee754_tests::${MODULE}::${CHUNK}::"
+              nargo test "ieee754_tests::${MODULE}::${CHUNK}::" || exit 1
+            done
+          fi
         shell: bash
 
   # Summary job that depends on all test jobs

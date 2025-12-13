@@ -503,11 +503,12 @@ def generate_ci_matrix(
     tests_by_file: dict[str, list[TestCase]], 
     output_path: str,
     chunk_size: int = 25,
-    max_chunks_per_group: int = 10
+    max_chunks_per_group: int = 50
 ) -> list[dict]:
     """Generate a CI matrix JSON file for GitHub Actions.
     
     Groups test modules into CI jobs. Large modules are split into multiple groups.
+    Uses compact representation to keep JSON size small.
     """
     import json
     
@@ -516,7 +517,9 @@ def generate_ci_matrix(
     # Always add unit tests group first
     groups.append({
         "name": "unit-tests",
-        "pattern": "test_float32 test_float64"
+        "module": "_unit_",
+        "start": 0,
+        "end": 0
     })
     
     for source_file, tests in sorted(tests_by_file.items()):
@@ -531,24 +534,22 @@ def generate_ci_matrix(
         num_chunks = (test_count + chunk_size - 1) // chunk_size
         
         if num_chunks <= max_chunks_per_group:
-            # Small enough to be a single group
+            # Small enough to be a single group - use _all_ to signal whole module
             groups.append({
                 "name": module_name.replace("test_", ""),
-                "pattern": f"ieee754_tests::{module_name}::"
+                "module": module_name,
+                "start": 0,
+                "end": num_chunks
             })
         else:
             # Split into multiple groups, each covering a range of chunks
-            # Use explicit chunk names to avoid pattern overlap (e.g., chunk_1 matching chunk_10)
             for g in range(0, num_chunks, max_chunks_per_group):
                 end_chunk = min(g + max_chunks_per_group, num_chunks)
-                # List all chunk names explicitly for this group
-                chunk_patterns = " ".join(
-                    f"ieee754_tests::{module_name}::chunk_{i:04d}::"
-                    for i in range(g, end_chunk)
-                )
                 groups.append({
                     "name": f"{module_name.replace('test_', '')}-{g // max_chunks_per_group}",
-                    "pattern": chunk_patterns
+                    "module": module_name,
+                    "start": g,
+                    "end": end_chunk
                 })
     
     # Write JSON file
