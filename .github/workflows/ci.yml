@@ -8,12 +8,29 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Read Noir versions from config file
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      noir-versions: ${{ steps.versions.outputs.versions }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read Noir versions
+        id: versions
+        run: |
+          VERSIONS=$(jq -c '.versions' .github/noir-versions.json)
+          echo "versions=$VERSIONS" >> $GITHUB_OUTPUT
+          echo "Noir versions: $VERSIONS"
+
   # Lint and format check
   lint:
     runs-on: ubuntu-latest
+    needs: setup
     strategy:
       matrix:
-        noir-version: ["1.0.0-beta.16", "1.0.0-beta.15", "1.0.0-beta.14"]
+        noir-version: ${{ fromJson(needs.setup.outputs.noir-versions) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -51,11 +68,11 @@ jobs:
   # Run tests in parallel groups
   test:
     runs-on: ubuntu-latest
-    needs: generate-tests
+    needs: [setup, generate-tests]
     strategy:
       fail-fast: false
       matrix:
-        noir-version: ["1.0.0-beta.16", "1.0.0-beta.15", "1.0.0-beta.14"]
+        noir-version: ${{ fromJson(needs.setup.outputs.noir-versions) }}
         group:
           - name: "unit-tests"
             pattern: "test_float32 test_float64"
@@ -111,11 +128,15 @@ jobs:
   # Summary job that depends on all test jobs
   test-summary:
     runs-on: ubuntu-latest
-    needs: [lint, test, generate-tests]
+    needs: [setup, lint, test, generate-tests]
     if: always()
     steps:
       - name: Check test results
         run: |
+          if [ "${{ needs.setup.result }}" != "success" ]; then
+            echo "Setup failed"
+            exit 1
+          fi
           if [ "${{ needs.lint.result }}" != "success" ]; then
             echo "Lint failed"
             exit 1
