@@ -499,6 +499,66 @@ def _source_to_module_name(source_file: str) -> str:
     return "test_" + re.sub(r'[^a-zA-Z0-9]', '_', base_name).lower()
 
 
+def generate_ci_matrix(
+    tests_by_file: dict[str, list[TestCase]], 
+    output_path: str,
+    chunk_size: int = 25,
+    max_chunks_per_group: int = 10
+) -> list[dict]:
+    """Generate a CI matrix JSON file for GitHub Actions.
+    
+    Groups test modules into CI jobs. Large modules are split into multiple groups.
+    """
+    import json
+    
+    groups = []
+    
+    # Always add unit tests group first
+    groups.append({
+        "name": "unit-tests",
+        "pattern": "test_float32 test_float64"
+    })
+    
+    for source_file, tests in sorted(tests_by_file.items()):
+        module_name = _source_to_module_name(source_file)
+        
+        # Count how many test functions will be generated
+        test_count = sum(1 for i, test in enumerate(tests) if generate_noir_test(test, i) is not None)
+        
+        if test_count == 0:
+            continue
+        
+        num_chunks = (test_count + chunk_size - 1) // chunk_size
+        
+        if num_chunks <= max_chunks_per_group:
+            # Small enough to be a single group
+            groups.append({
+                "name": module_name.replace("test_", ""),
+                "pattern": f"ieee754_tests::{module_name}::"
+            })
+        else:
+            # Split into multiple groups, each covering a range of chunks
+            # Use explicit chunk names to avoid pattern overlap (e.g., chunk_1 matching chunk_10)
+            for g in range(0, num_chunks, max_chunks_per_group):
+                end_chunk = min(g + max_chunks_per_group, num_chunks)
+                # List all chunk names explicitly for this group
+                chunk_patterns = " ".join(
+                    f"ieee754_tests::{module_name}::chunk_{i:04d}::"
+                    for i in range(g, end_chunk)
+                )
+                groups.append({
+                    "name": f"{module_name.replace('test_', '')}-{g // max_chunks_per_group}",
+                    "pattern": chunk_patterns
+                })
+    
+    # Write JSON file
+    with open(output_path, 'w') as f:
+        json.dump({"groups": groups}, f, indent=2)
+    
+    print(f"Generated CI matrix with {len(groups)} groups to {output_path}")
+    return groups
+
+
 def generate_noir_file_per_source(
     tests_by_file: dict[str, list[TestCase]], 
     output_dir: str, 
@@ -686,6 +746,11 @@ Examples:
         action='store_true',
         help='Clear the download cache before running'
     )
+    parser.add_argument(
+        '--ci-matrix',
+        metavar='PATH',
+        help='Generate CI matrix JSON file for GitHub Actions (use with --split)'
+    )
     
     args = parser.parse_args()
     
@@ -804,6 +869,10 @@ Examples:
         
         total_generated = sum(results.values())
         print(f"\nTotal: {total_generated} tests generated across {len(results)} files")
+        
+        # Generate CI matrix if requested
+        if args.ci_matrix:
+            generate_ci_matrix(tests_by_file, args.ci_matrix, chunk_size=args.chunk_size)
         
     else:
         # Parse all test files into one list

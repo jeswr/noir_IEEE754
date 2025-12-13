@@ -8,6 +8,37 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Generate tests job - must run first to produce both tests and CI matrix
+  generate-tests:
+    runs-on: ubuntu-latest
+    outputs:
+      test-groups: ${{ steps.matrix.outputs.groups }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Generate IEEE 754 tests and CI matrix
+        run: python3 scripts/generate_tests.py --all --split --output-dir src/ieee754_tests --ci-matrix .github/test-matrix.json
+
+      - name: Read test matrix
+        id: matrix
+        run: |
+          GROUPS=$(jq -c '.groups' .github/test-matrix.json)
+          echo "groups=$GROUPS" >> $GITHUB_OUTPUT
+          echo "Test groups: $(echo $GROUPS | jq length) groups"
+
+      - name: Upload generated tests
+        uses: actions/upload-artifact@v4
+        with:
+          name: ieee754-tests
+          path: src/ieee754_tests/
+          retention-days: 1
+
   # Read Noir versions from config file
   setup:
     runs-on: ubuntu-latest
@@ -43,28 +74,6 @@ jobs:
       - name: Check format
         run: nargo fmt --check
 
-  # Generate tests job (validates test generation works)
-  generate-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Generate IEEE 754 tests
-        run: python3 scripts/generate_tests.py --all --split --output-dir src/ieee754_tests
-
-      - name: Upload generated tests
-        uses: actions/upload-artifact@v4
-        with:
-          name: ieee754-tests
-          path: src/ieee754_tests/
-          retention-days: 1
-
   # Run tests in parallel groups
   test:
     runs-on: ubuntu-latest
@@ -73,33 +82,7 @@ jobs:
       fail-fast: false
       matrix:
         noir-version: ${{ fromJson(needs.setup.outputs.noir-versions) }}
-        group:
-          - name: "unit-tests"
-            pattern: "test_float32 test_float64"
-          - name: "add-shift"
-            pattern: "ieee754_tests::test_add_shift::"
-          - name: "add-cancellation"
-            pattern: "ieee754_tests::test_add_cancellation::"
-          - name: "add-cancellation-subnorm"
-            pattern: "ieee754_tests::test_add_cancellation_and_subnorm_result::"
-          - name: "basic-types"
-            pattern: "ieee754_tests::test_basic_types_inputs:: ieee754_tests::test_basic_types_intermediate::"
-          - name: "special-cases"
-            pattern: "ieee754_tests::test_hamming_distance:: ieee754_tests::test_overflow:: ieee754_tests::test_rounding:: ieee754_tests::test_underflow:: ieee754_tests::test_vicinity_of_rounding_boundaries::"
-          - name: "special-sig-0"
-            pattern: "ieee754_tests::test_add_shift_and_special_significands::chunk_00"
-          - name: "special-sig-1"
-            pattern: "ieee754_tests::test_add_shift_and_special_significands::chunk_01"
-          - name: "special-sig-2"
-            pattern: "ieee754_tests::test_add_shift_and_special_significands::chunk_02"
-          - name: "special-sig-3"
-            pattern: "ieee754_tests::test_add_shift_and_special_significands::chunk_03"
-          - name: "special-sig-4"
-            pattern: "ieee754_tests::test_add_shift_and_special_significands::chunk_04"
-          - name: "special-sig-5"
-            pattern: "ieee754_tests::test_add_shift_and_special_significands::chunk_05"
-          - name: "special-sig-6"
-            pattern: "ieee754_tests::test_add_shift_and_special_significands::chunk_06"
+        group: ${{ fromJson(needs.generate-tests.outputs.test-groups) }}
     name: test (${{ matrix.noir-version }}, ${{ matrix.group.name }})
     steps:
       - name: Checkout repository

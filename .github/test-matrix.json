@@ -1,0 +1,328 @@
+{
+  "groups": [
+    {
+      "name": "unit-tests",
+      "pattern": "test_float32 test_float64"
+    },
+    {
+      "name": "add_cancellation_and_subnorm_result-0",
+      "pattern": "ieee754_tests::test_add_cancellation_and_subnorm_result::chunk_0000:: ieee754_tests::test_add_cancellation_and_subnorm_result::chunk_0001:: ieee754_tests::test_add_cancellation_and_subnorm_result::chunk_0002:: ieee754_tests::test_add_cancellation_and_subnorm_result::chunk_0003:: ieee754_tests::test_add_cancellation_and_subnorm_result::chunk_0004:: ieee754_tests::test_add_cancellation_and_subnorm_result::chunk_0005:: ieee754_tests::test_add_cancellation_and_subnorm_result::chunk_0006:: ieee754_tests::test_add_cancellation_and_subnorm_result::chunk_0007:: ieee754_tests::test_add_cancellation_and_subnorm_result::chunk_0008:: ieee754_tests::test_add_cancellation_and_subnorm_result::chunk_0009::"
+    },
+    {
+      "name": "add_cancellation_and_subnorm_result-1",
+      "pattern": "ieee754_tests::test_add_cancellation_and_subnorm_result::chunk_0010:: ieee754_tests::test_add_cancellation_and_subnorm_result::chunk_0011:: ieee754_tests::test_add_cancellation_and_subnorm_result::chunk_0012::"
+    },
+    {
+      "name": "add_cancellation",
+      "pattern": "ieee754_tests::test_add_cancellation::"
+    },
+    {
+      "name": "add_shift_and_special_significands-0",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0000:: ieee754_tests::test_add_shift_and_special_significands::chunk_0001:: ieee754_tests::test_add_shift_and_special_significands::chunk_0002:: ieee754_tests::test_add_shift_and_special_significands::chunk_0003:: ieee754_tests::test_add_shift_and_special_significands::chunk_0004:: ieee754_tests::test_add_shift_and_special_significands::chunk_0005:: ieee754_tests::test_add_shift_and_special_significands::chunk_0006:: ieee754_tests::test_add_shift_and_special_significands::chunk_0007:: ieee754_tests::test_add_shift_and_special_significands::chunk_0008:: ieee754_tests::test_add_shift_and_special_significands::chunk_0009::"
+    },
+    {
+      "name": "add_shift_and_special_significands-1",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0010:: ieee754_tests::test_add_shift_and_special_significands::chunk_0011:: ieee754_tests::test_add_shift_and_special_significands::chunk_0012:: ieee754_tests::test_add_shift_and_special_significands::chunk_0013:: ieee754_tests::test_add_shift_and_special_significands::chunk_0014:: ieee754_tests::test_add_shift_and_special_significands::chunk_0015:: ieee754_tests::test_add_shift_and_special_significands::chunk_0016:: ieee754_tests::test_add_shift_and_special_significands::chunk_0017:: ieee754_tests::test_add_shift_and_special_significands::chunk_0018:: ieee754_tests::test_add_shift_and_special_significands::chunk_0019::"
+    },
+    {
+      "name": "add_shift_and_special_significands-2",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0020:: ieee754_tests::test_add_shift_and_special_significands::chunk_0021:: ieee754_tests::test_add_shift_and_special_significands::chunk_0022:: ieee754_tests::test_add_shift_and_special_significands::chunk_0023:: ieee754_tests::test_add_shift_and_special_significands::chunk_0024:: ieee754_tests::test_add_shift_and_special_significands::chunk_0025:: ieee754_tests::test_add_shift_and_special_significands::chunk_0026:: ieee754_tests::test_add_shift_and_special_significands::chunk_0027:: ieee754_tests::test_add_shift_and_special_significands::chunk_0028:: ieee754_tests::test_add_shift_and_special_significands::chunk_0029::"
+    },
+    {
+      "name": "add_shift_and_special_significands-3",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0030:: ieee754_tests::test_add_shift_and_special_significands::chunk_0031:: ieee754_tests::test_add_shift_and_special_significands::chunk_0032:: ieee754_tests::test_add_shift_and_special_significands::chunk_0033:: ieee754_tests::test_add_shift_and_special_significands::chunk_0034:: ieee754_tests::test_add_shift_and_special_significands::chunk_0035:: ieee754_tests::test_add_shift_and_special_significands::chunk_0036:: ieee754_tests::test_add_shift_and_special_significands::chunk_0037:: ieee754_tests::test_add_shift_and_special_significands::chunk_0038:: ieee754_tests::test_add_shift_and_special_significands::chunk_0039::"
+    },
+    {
+      "name": "add_shift_and_special_significands-4",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0040:: ieee754_tests::test_add_shift_and_special_significands::chunk_0041:: ieee754_tests::test_add_shift_and_special_significands::chunk_0042:: ieee754_tests::test_add_shift_and_special_significands::chunk_0043:: ieee754_tests::test_add_shift_and_special_significands::chunk_0044:: ieee754_tests::test_add_shift_and_special_significands::chunk_0045:: ieee754_tests::test_add_shift_and_special_significands::chunk_0046:: ieee754_tests::test_add_shift_and_special_significands::chunk_0047:: ieee754_tests::test_add_shift_and_special_significands::chunk_0048:: ieee754_tests::test_add_shift_and_special_significands::chunk_0049::"
+    },
+    {
+      "name": "add_shift_and_special_significands-5",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0050:: ieee754_tests::test_add_shift_and_special_significands::chunk_0051:: ieee754_tests::test_add_shift_and_special_significands::chunk_0052:: ieee754_tests::test_add_shift_and_special_significands::chunk_0053:: ieee754_tests::test_add_shift_and_special_significands::chunk_0054:: ieee754_tests::test_add_shift_and_special_significands::chunk_0055:: ieee754_tests::test_add_shift_and_special_significands::chunk_0056:: ieee754_tests::test_add_shift_and_special_significands::chunk_0057:: ieee754_tests::test_add_shift_and_special_significands::chunk_0058:: ieee754_tests::test_add_shift_and_special_significands::chunk_0059::"
+    },
+    {
+      "name": "add_shift_and_special_significands-6",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0060:: ieee754_tests::test_add_shift_and_special_significands::chunk_0061:: ieee754_tests::test_add_shift_and_special_significands::chunk_0062:: ieee754_tests::test_add_shift_and_special_significands::chunk_0063:: ieee754_tests::test_add_shift_and_special_significands::chunk_0064:: ieee754_tests::test_add_shift_and_special_significands::chunk_0065:: ieee754_tests::test_add_shift_and_special_significands::chunk_0066:: ieee754_tests::test_add_shift_and_special_significands::chunk_0067:: ieee754_tests::test_add_shift_and_special_significands::chunk_0068:: ieee754_tests::test_add_shift_and_special_significands::chunk_0069::"
+    },
+    {
+      "name": "add_shift_and_special_significands-7",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0070:: ieee754_tests::test_add_shift_and_special_significands::chunk_0071:: ieee754_tests::test_add_shift_and_special_significands::chunk_0072:: ieee754_tests::test_add_shift_and_special_significands::chunk_0073:: ieee754_tests::test_add_shift_and_special_significands::chunk_0074:: ieee754_tests::test_add_shift_and_special_significands::chunk_0075:: ieee754_tests::test_add_shift_and_special_significands::chunk_0076:: ieee754_tests::test_add_shift_and_special_significands::chunk_0077:: ieee754_tests::test_add_shift_and_special_significands::chunk_0078:: ieee754_tests::test_add_shift_and_special_significands::chunk_0079::"
+    },
+    {
+      "name": "add_shift_and_special_significands-8",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0080:: ieee754_tests::test_add_shift_and_special_significands::chunk_0081:: ieee754_tests::test_add_shift_and_special_significands::chunk_0082:: ieee754_tests::test_add_shift_and_special_significands::chunk_0083:: ieee754_tests::test_add_shift_and_special_significands::chunk_0084:: ieee754_tests::test_add_shift_and_special_significands::chunk_0085:: ieee754_tests::test_add_shift_and_special_significands::chunk_0086:: ieee754_tests::test_add_shift_and_special_significands::chunk_0087:: ieee754_tests::test_add_shift_and_special_significands::chunk_0088:: ieee754_tests::test_add_shift_and_special_significands::chunk_0089::"
+    },
+    {
+      "name": "add_shift_and_special_significands-9",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0090:: ieee754_tests::test_add_shift_and_special_significands::chunk_0091:: ieee754_tests::test_add_shift_and_special_significands::chunk_0092:: ieee754_tests::test_add_shift_and_special_significands::chunk_0093:: ieee754_tests::test_add_shift_and_special_significands::chunk_0094:: ieee754_tests::test_add_shift_and_special_significands::chunk_0095:: ieee754_tests::test_add_shift_and_special_significands::chunk_0096:: ieee754_tests::test_add_shift_and_special_significands::chunk_0097:: ieee754_tests::test_add_shift_and_special_significands::chunk_0098:: ieee754_tests::test_add_shift_and_special_significands::chunk_0099::"
+    },
+    {
+      "name": "add_shift_and_special_significands-10",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0100:: ieee754_tests::test_add_shift_and_special_significands::chunk_0101:: ieee754_tests::test_add_shift_and_special_significands::chunk_0102:: ieee754_tests::test_add_shift_and_special_significands::chunk_0103:: ieee754_tests::test_add_shift_and_special_significands::chunk_0104:: ieee754_tests::test_add_shift_and_special_significands::chunk_0105:: ieee754_tests::test_add_shift_and_special_significands::chunk_0106:: ieee754_tests::test_add_shift_and_special_significands::chunk_0107:: ieee754_tests::test_add_shift_and_special_significands::chunk_0108:: ieee754_tests::test_add_shift_and_special_significands::chunk_0109::"
+    },
+    {
+      "name": "add_shift_and_special_significands-11",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0110:: ieee754_tests::test_add_shift_and_special_significands::chunk_0111:: ieee754_tests::test_add_shift_and_special_significands::chunk_0112:: ieee754_tests::test_add_shift_and_special_significands::chunk_0113:: ieee754_tests::test_add_shift_and_special_significands::chunk_0114:: ieee754_tests::test_add_shift_and_special_significands::chunk_0115:: ieee754_tests::test_add_shift_and_special_significands::chunk_0116:: ieee754_tests::test_add_shift_and_special_significands::chunk_0117:: ieee754_tests::test_add_shift_and_special_significands::chunk_0118:: ieee754_tests::test_add_shift_and_special_significands::chunk_0119::"
+    },
+    {
+      "name": "add_shift_and_special_significands-12",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0120:: ieee754_tests::test_add_shift_and_special_significands::chunk_0121:: ieee754_tests::test_add_shift_and_special_significands::chunk_0122:: ieee754_tests::test_add_shift_and_special_significands::chunk_0123:: ieee754_tests::test_add_shift_and_special_significands::chunk_0124:: ieee754_tests::test_add_shift_and_special_significands::chunk_0125:: ieee754_tests::test_add_shift_and_special_significands::chunk_0126:: ieee754_tests::test_add_shift_and_special_significands::chunk_0127:: ieee754_tests::test_add_shift_and_special_significands::chunk_0128:: ieee754_tests::test_add_shift_and_special_significands::chunk_0129::"
+    },
+    {
+      "name": "add_shift_and_special_significands-13",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0130:: ieee754_tests::test_add_shift_and_special_significands::chunk_0131:: ieee754_tests::test_add_shift_and_special_significands::chunk_0132:: ieee754_tests::test_add_shift_and_special_significands::chunk_0133:: ieee754_tests::test_add_shift_and_special_significands::chunk_0134:: ieee754_tests::test_add_shift_and_special_significands::chunk_0135:: ieee754_tests::test_add_shift_and_special_significands::chunk_0136:: ieee754_tests::test_add_shift_and_special_significands::chunk_0137:: ieee754_tests::test_add_shift_and_special_significands::chunk_0138:: ieee754_tests::test_add_shift_and_special_significands::chunk_0139::"
+    },
+    {
+      "name": "add_shift_and_special_significands-14",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0140:: ieee754_tests::test_add_shift_and_special_significands::chunk_0141:: ieee754_tests::test_add_shift_and_special_significands::chunk_0142:: ieee754_tests::test_add_shift_and_special_significands::chunk_0143:: ieee754_tests::test_add_shift_and_special_significands::chunk_0144:: ieee754_tests::test_add_shift_and_special_significands::chunk_0145:: ieee754_tests::test_add_shift_and_special_significands::chunk_0146:: ieee754_tests::test_add_shift_and_special_significands::chunk_0147:: ieee754_tests::test_add_shift_and_special_significands::chunk_0148:: ieee754_tests::test_add_shift_and_special_significands::chunk_0149::"
+    },
+    {
+      "name": "add_shift_and_special_significands-15",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0150:: ieee754_tests::test_add_shift_and_special_significands::chunk_0151:: ieee754_tests::test_add_shift_and_special_significands::chunk_0152:: ieee754_tests::test_add_shift_and_special_significands::chunk_0153:: ieee754_tests::test_add_shift_and_special_significands::chunk_0154:: ieee754_tests::test_add_shift_and_special_significands::chunk_0155:: ieee754_tests::test_add_shift_and_special_significands::chunk_0156:: ieee754_tests::test_add_shift_and_special_significands::chunk_0157:: ieee754_tests::test_add_shift_and_special_significands::chunk_0158:: ieee754_tests::test_add_shift_and_special_significands::chunk_0159::"
+    },
+    {
+      "name": "add_shift_and_special_significands-16",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0160:: ieee754_tests::test_add_shift_and_special_significands::chunk_0161:: ieee754_tests::test_add_shift_and_special_significands::chunk_0162:: ieee754_tests::test_add_shift_and_special_significands::chunk_0163:: ieee754_tests::test_add_shift_and_special_significands::chunk_0164:: ieee754_tests::test_add_shift_and_special_significands::chunk_0165:: ieee754_tests::test_add_shift_and_special_significands::chunk_0166:: ieee754_tests::test_add_shift_and_special_significands::chunk_0167:: ieee754_tests::test_add_shift_and_special_significands::chunk_0168:: ieee754_tests::test_add_shift_and_special_significands::chunk_0169::"
+    },
+    {
+      "name": "add_shift_and_special_significands-17",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0170:: ieee754_tests::test_add_shift_and_special_significands::chunk_0171:: ieee754_tests::test_add_shift_and_special_significands::chunk_0172:: ieee754_tests::test_add_shift_and_special_significands::chunk_0173:: ieee754_tests::test_add_shift_and_special_significands::chunk_0174:: ieee754_tests::test_add_shift_and_special_significands::chunk_0175:: ieee754_tests::test_add_shift_and_special_significands::chunk_0176:: ieee754_tests::test_add_shift_and_special_significands::chunk_0177:: ieee754_tests::test_add_shift_and_special_significands::chunk_0178:: ieee754_tests::test_add_shift_and_special_significands::chunk_0179::"
+    },
+    {
+      "name": "add_shift_and_special_significands-18",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0180:: ieee754_tests::test_add_shift_and_special_significands::chunk_0181:: ieee754_tests::test_add_shift_and_special_significands::chunk_0182:: ieee754_tests::test_add_shift_and_special_significands::chunk_0183:: ieee754_tests::test_add_shift_and_special_significands::chunk_0184:: ieee754_tests::test_add_shift_and_special_significands::chunk_0185:: ieee754_tests::test_add_shift_and_special_significands::chunk_0186:: ieee754_tests::test_add_shift_and_special_significands::chunk_0187:: ieee754_tests::test_add_shift_and_special_significands::chunk_0188:: ieee754_tests::test_add_shift_and_special_significands::chunk_0189::"
+    },
+    {
+      "name": "add_shift_and_special_significands-19",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0190:: ieee754_tests::test_add_shift_and_special_significands::chunk_0191:: ieee754_tests::test_add_shift_and_special_significands::chunk_0192:: ieee754_tests::test_add_shift_and_special_significands::chunk_0193:: ieee754_tests::test_add_shift_and_special_significands::chunk_0194:: ieee754_tests::test_add_shift_and_special_significands::chunk_0195:: ieee754_tests::test_add_shift_and_special_significands::chunk_0196:: ieee754_tests::test_add_shift_and_special_significands::chunk_0197:: ieee754_tests::test_add_shift_and_special_significands::chunk_0198:: ieee754_tests::test_add_shift_and_special_significands::chunk_0199::"
+    },
+    {
+      "name": "add_shift_and_special_significands-20",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0200:: ieee754_tests::test_add_shift_and_special_significands::chunk_0201:: ieee754_tests::test_add_shift_and_special_significands::chunk_0202:: ieee754_tests::test_add_shift_and_special_significands::chunk_0203:: ieee754_tests::test_add_shift_and_special_significands::chunk_0204:: ieee754_tests::test_add_shift_and_special_significands::chunk_0205:: ieee754_tests::test_add_shift_and_special_significands::chunk_0206:: ieee754_tests::test_add_shift_and_special_significands::chunk_0207:: ieee754_tests::test_add_shift_and_special_significands::chunk_0208:: ieee754_tests::test_add_shift_and_special_significands::chunk_0209::"
+    },
+    {
+      "name": "add_shift_and_special_significands-21",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0210:: ieee754_tests::test_add_shift_and_special_significands::chunk_0211:: ieee754_tests::test_add_shift_and_special_significands::chunk_0212:: ieee754_tests::test_add_shift_and_special_significands::chunk_0213:: ieee754_tests::test_add_shift_and_special_significands::chunk_0214:: ieee754_tests::test_add_shift_and_special_significands::chunk_0215:: ieee754_tests::test_add_shift_and_special_significands::chunk_0216:: ieee754_tests::test_add_shift_and_special_significands::chunk_0217:: ieee754_tests::test_add_shift_and_special_significands::chunk_0218:: ieee754_tests::test_add_shift_and_special_significands::chunk_0219::"
+    },
+    {
+      "name": "add_shift_and_special_significands-22",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0220:: ieee754_tests::test_add_shift_and_special_significands::chunk_0221:: ieee754_tests::test_add_shift_and_special_significands::chunk_0222:: ieee754_tests::test_add_shift_and_special_significands::chunk_0223:: ieee754_tests::test_add_shift_and_special_significands::chunk_0224:: ieee754_tests::test_add_shift_and_special_significands::chunk_0225:: ieee754_tests::test_add_shift_and_special_significands::chunk_0226:: ieee754_tests::test_add_shift_and_special_significands::chunk_0227:: ieee754_tests::test_add_shift_and_special_significands::chunk_0228:: ieee754_tests::test_add_shift_and_special_significands::chunk_0229::"
+    },
+    {
+      "name": "add_shift_and_special_significands-23",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0230:: ieee754_tests::test_add_shift_and_special_significands::chunk_0231:: ieee754_tests::test_add_shift_and_special_significands::chunk_0232:: ieee754_tests::test_add_shift_and_special_significands::chunk_0233:: ieee754_tests::test_add_shift_and_special_significands::chunk_0234:: ieee754_tests::test_add_shift_and_special_significands::chunk_0235:: ieee754_tests::test_add_shift_and_special_significands::chunk_0236:: ieee754_tests::test_add_shift_and_special_significands::chunk_0237:: ieee754_tests::test_add_shift_and_special_significands::chunk_0238:: ieee754_tests::test_add_shift_and_special_significands::chunk_0239::"
+    },
+    {
+      "name": "add_shift_and_special_significands-24",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0240:: ieee754_tests::test_add_shift_and_special_significands::chunk_0241:: ieee754_tests::test_add_shift_and_special_significands::chunk_0242:: ieee754_tests::test_add_shift_and_special_significands::chunk_0243:: ieee754_tests::test_add_shift_and_special_significands::chunk_0244:: ieee754_tests::test_add_shift_and_special_significands::chunk_0245:: ieee754_tests::test_add_shift_and_special_significands::chunk_0246:: ieee754_tests::test_add_shift_and_special_significands::chunk_0247:: ieee754_tests::test_add_shift_and_special_significands::chunk_0248:: ieee754_tests::test_add_shift_and_special_significands::chunk_0249::"
+    },
+    {
+      "name": "add_shift_and_special_significands-25",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0250:: ieee754_tests::test_add_shift_and_special_significands::chunk_0251:: ieee754_tests::test_add_shift_and_special_significands::chunk_0252:: ieee754_tests::test_add_shift_and_special_significands::chunk_0253:: ieee754_tests::test_add_shift_and_special_significands::chunk_0254:: ieee754_tests::test_add_shift_and_special_significands::chunk_0255:: ieee754_tests::test_add_shift_and_special_significands::chunk_0256:: ieee754_tests::test_add_shift_and_special_significands::chunk_0257:: ieee754_tests::test_add_shift_and_special_significands::chunk_0258:: ieee754_tests::test_add_shift_and_special_significands::chunk_0259::"
+    },
+    {
+      "name": "add_shift_and_special_significands-26",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0260:: ieee754_tests::test_add_shift_and_special_significands::chunk_0261:: ieee754_tests::test_add_shift_and_special_significands::chunk_0262:: ieee754_tests::test_add_shift_and_special_significands::chunk_0263:: ieee754_tests::test_add_shift_and_special_significands::chunk_0264:: ieee754_tests::test_add_shift_and_special_significands::chunk_0265:: ieee754_tests::test_add_shift_and_special_significands::chunk_0266:: ieee754_tests::test_add_shift_and_special_significands::chunk_0267:: ieee754_tests::test_add_shift_and_special_significands::chunk_0268:: ieee754_tests::test_add_shift_and_special_significands::chunk_0269::"
+    },
+    {
+      "name": "add_shift_and_special_significands-27",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0270:: ieee754_tests::test_add_shift_and_special_significands::chunk_0271:: ieee754_tests::test_add_shift_and_special_significands::chunk_0272:: ieee754_tests::test_add_shift_and_special_significands::chunk_0273:: ieee754_tests::test_add_shift_and_special_significands::chunk_0274:: ieee754_tests::test_add_shift_and_special_significands::chunk_0275:: ieee754_tests::test_add_shift_and_special_significands::chunk_0276:: ieee754_tests::test_add_shift_and_special_significands::chunk_0277:: ieee754_tests::test_add_shift_and_special_significands::chunk_0278:: ieee754_tests::test_add_shift_and_special_significands::chunk_0279::"
+    },
+    {
+      "name": "add_shift_and_special_significands-28",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0280:: ieee754_tests::test_add_shift_and_special_significands::chunk_0281:: ieee754_tests::test_add_shift_and_special_significands::chunk_0282:: ieee754_tests::test_add_shift_and_special_significands::chunk_0283:: ieee754_tests::test_add_shift_and_special_significands::chunk_0284:: ieee754_tests::test_add_shift_and_special_significands::chunk_0285:: ieee754_tests::test_add_shift_and_special_significands::chunk_0286:: ieee754_tests::test_add_shift_and_special_significands::chunk_0287:: ieee754_tests::test_add_shift_and_special_significands::chunk_0288:: ieee754_tests::test_add_shift_and_special_significands::chunk_0289::"
+    },
+    {
+      "name": "add_shift_and_special_significands-29",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0290:: ieee754_tests::test_add_shift_and_special_significands::chunk_0291:: ieee754_tests::test_add_shift_and_special_significands::chunk_0292:: ieee754_tests::test_add_shift_and_special_significands::chunk_0293:: ieee754_tests::test_add_shift_and_special_significands::chunk_0294:: ieee754_tests::test_add_shift_and_special_significands::chunk_0295:: ieee754_tests::test_add_shift_and_special_significands::chunk_0296:: ieee754_tests::test_add_shift_and_special_significands::chunk_0297:: ieee754_tests::test_add_shift_and_special_significands::chunk_0298:: ieee754_tests::test_add_shift_and_special_significands::chunk_0299::"
+    },
+    {
+      "name": "add_shift_and_special_significands-30",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0300:: ieee754_tests::test_add_shift_and_special_significands::chunk_0301:: ieee754_tests::test_add_shift_and_special_significands::chunk_0302:: ieee754_tests::test_add_shift_and_special_significands::chunk_0303:: ieee754_tests::test_add_shift_and_special_significands::chunk_0304:: ieee754_tests::test_add_shift_and_special_significands::chunk_0305:: ieee754_tests::test_add_shift_and_special_significands::chunk_0306:: ieee754_tests::test_add_shift_and_special_significands::chunk_0307:: ieee754_tests::test_add_shift_and_special_significands::chunk_0308:: ieee754_tests::test_add_shift_and_special_significands::chunk_0309::"
+    },
+    {
+      "name": "add_shift_and_special_significands-31",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0310:: ieee754_tests::test_add_shift_and_special_significands::chunk_0311:: ieee754_tests::test_add_shift_and_special_significands::chunk_0312:: ieee754_tests::test_add_shift_and_special_significands::chunk_0313:: ieee754_tests::test_add_shift_and_special_significands::chunk_0314:: ieee754_tests::test_add_shift_and_special_significands::chunk_0315:: ieee754_tests::test_add_shift_and_special_significands::chunk_0316:: ieee754_tests::test_add_shift_and_special_significands::chunk_0317:: ieee754_tests::test_add_shift_and_special_significands::chunk_0318:: ieee754_tests::test_add_shift_and_special_significands::chunk_0319::"
+    },
+    {
+      "name": "add_shift_and_special_significands-32",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0320:: ieee754_tests::test_add_shift_and_special_significands::chunk_0321:: ieee754_tests::test_add_shift_and_special_significands::chunk_0322:: ieee754_tests::test_add_shift_and_special_significands::chunk_0323:: ieee754_tests::test_add_shift_and_special_significands::chunk_0324:: ieee754_tests::test_add_shift_and_special_significands::chunk_0325:: ieee754_tests::test_add_shift_and_special_significands::chunk_0326:: ieee754_tests::test_add_shift_and_special_significands::chunk_0327:: ieee754_tests::test_add_shift_and_special_significands::chunk_0328:: ieee754_tests::test_add_shift_and_special_significands::chunk_0329::"
+    },
+    {
+      "name": "add_shift_and_special_significands-33",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0330:: ieee754_tests::test_add_shift_and_special_significands::chunk_0331:: ieee754_tests::test_add_shift_and_special_significands::chunk_0332:: ieee754_tests::test_add_shift_and_special_significands::chunk_0333:: ieee754_tests::test_add_shift_and_special_significands::chunk_0334:: ieee754_tests::test_add_shift_and_special_significands::chunk_0335:: ieee754_tests::test_add_shift_and_special_significands::chunk_0336:: ieee754_tests::test_add_shift_and_special_significands::chunk_0337:: ieee754_tests::test_add_shift_and_special_significands::chunk_0338:: ieee754_tests::test_add_shift_and_special_significands::chunk_0339::"
+    },
+    {
+      "name": "add_shift_and_special_significands-34",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0340:: ieee754_tests::test_add_shift_and_special_significands::chunk_0341:: ieee754_tests::test_add_shift_and_special_significands::chunk_0342:: ieee754_tests::test_add_shift_and_special_significands::chunk_0343:: ieee754_tests::test_add_shift_and_special_significands::chunk_0344:: ieee754_tests::test_add_shift_and_special_significands::chunk_0345:: ieee754_tests::test_add_shift_and_special_significands::chunk_0346:: ieee754_tests::test_add_shift_and_special_significands::chunk_0347:: ieee754_tests::test_add_shift_and_special_significands::chunk_0348:: ieee754_tests::test_add_shift_and_special_significands::chunk_0349::"
+    },
+    {
+      "name": "add_shift_and_special_significands-35",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0350:: ieee754_tests::test_add_shift_and_special_significands::chunk_0351:: ieee754_tests::test_add_shift_and_special_significands::chunk_0352:: ieee754_tests::test_add_shift_and_special_significands::chunk_0353:: ieee754_tests::test_add_shift_and_special_significands::chunk_0354:: ieee754_tests::test_add_shift_and_special_significands::chunk_0355:: ieee754_tests::test_add_shift_and_special_significands::chunk_0356:: ieee754_tests::test_add_shift_and_special_significands::chunk_0357:: ieee754_tests::test_add_shift_and_special_significands::chunk_0358:: ieee754_tests::test_add_shift_and_special_significands::chunk_0359::"
+    },
+    {
+      "name": "add_shift_and_special_significands-36",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0360:: ieee754_tests::test_add_shift_and_special_significands::chunk_0361:: ieee754_tests::test_add_shift_and_special_significands::chunk_0362:: ieee754_tests::test_add_shift_and_special_significands::chunk_0363:: ieee754_tests::test_add_shift_and_special_significands::chunk_0364:: ieee754_tests::test_add_shift_and_special_significands::chunk_0365:: ieee754_tests::test_add_shift_and_special_significands::chunk_0366:: ieee754_tests::test_add_shift_and_special_significands::chunk_0367:: ieee754_tests::test_add_shift_and_special_significands::chunk_0368:: ieee754_tests::test_add_shift_and_special_significands::chunk_0369::"
+    },
+    {
+      "name": "add_shift_and_special_significands-37",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0370:: ieee754_tests::test_add_shift_and_special_significands::chunk_0371:: ieee754_tests::test_add_shift_and_special_significands::chunk_0372:: ieee754_tests::test_add_shift_and_special_significands::chunk_0373:: ieee754_tests::test_add_shift_and_special_significands::chunk_0374:: ieee754_tests::test_add_shift_and_special_significands::chunk_0375:: ieee754_tests::test_add_shift_and_special_significands::chunk_0376:: ieee754_tests::test_add_shift_and_special_significands::chunk_0377:: ieee754_tests::test_add_shift_and_special_significands::chunk_0378:: ieee754_tests::test_add_shift_and_special_significands::chunk_0379::"
+    },
+    {
+      "name": "add_shift_and_special_significands-38",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0380:: ieee754_tests::test_add_shift_and_special_significands::chunk_0381:: ieee754_tests::test_add_shift_and_special_significands::chunk_0382:: ieee754_tests::test_add_shift_and_special_significands::chunk_0383:: ieee754_tests::test_add_shift_and_special_significands::chunk_0384:: ieee754_tests::test_add_shift_and_special_significands::chunk_0385:: ieee754_tests::test_add_shift_and_special_significands::chunk_0386:: ieee754_tests::test_add_shift_and_special_significands::chunk_0387:: ieee754_tests::test_add_shift_and_special_significands::chunk_0388:: ieee754_tests::test_add_shift_and_special_significands::chunk_0389::"
+    },
+    {
+      "name": "add_shift_and_special_significands-39",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0390:: ieee754_tests::test_add_shift_and_special_significands::chunk_0391:: ieee754_tests::test_add_shift_and_special_significands::chunk_0392:: ieee754_tests::test_add_shift_and_special_significands::chunk_0393:: ieee754_tests::test_add_shift_and_special_significands::chunk_0394:: ieee754_tests::test_add_shift_and_special_significands::chunk_0395:: ieee754_tests::test_add_shift_and_special_significands::chunk_0396:: ieee754_tests::test_add_shift_and_special_significands::chunk_0397:: ieee754_tests::test_add_shift_and_special_significands::chunk_0398:: ieee754_tests::test_add_shift_and_special_significands::chunk_0399::"
+    },
+    {
+      "name": "add_shift_and_special_significands-40",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0400:: ieee754_tests::test_add_shift_and_special_significands::chunk_0401:: ieee754_tests::test_add_shift_and_special_significands::chunk_0402:: ieee754_tests::test_add_shift_and_special_significands::chunk_0403:: ieee754_tests::test_add_shift_and_special_significands::chunk_0404:: ieee754_tests::test_add_shift_and_special_significands::chunk_0405:: ieee754_tests::test_add_shift_and_special_significands::chunk_0406:: ieee754_tests::test_add_shift_and_special_significands::chunk_0407:: ieee754_tests::test_add_shift_and_special_significands::chunk_0408:: ieee754_tests::test_add_shift_and_special_significands::chunk_0409::"
+    },
+    {
+      "name": "add_shift_and_special_significands-41",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0410:: ieee754_tests::test_add_shift_and_special_significands::chunk_0411:: ieee754_tests::test_add_shift_and_special_significands::chunk_0412:: ieee754_tests::test_add_shift_and_special_significands::chunk_0413:: ieee754_tests::test_add_shift_and_special_significands::chunk_0414:: ieee754_tests::test_add_shift_and_special_significands::chunk_0415:: ieee754_tests::test_add_shift_and_special_significands::chunk_0416:: ieee754_tests::test_add_shift_and_special_significands::chunk_0417:: ieee754_tests::test_add_shift_and_special_significands::chunk_0418:: ieee754_tests::test_add_shift_and_special_significands::chunk_0419::"
+    },
+    {
+      "name": "add_shift_and_special_significands-42",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0420:: ieee754_tests::test_add_shift_and_special_significands::chunk_0421:: ieee754_tests::test_add_shift_and_special_significands::chunk_0422:: ieee754_tests::test_add_shift_and_special_significands::chunk_0423:: ieee754_tests::test_add_shift_and_special_significands::chunk_0424:: ieee754_tests::test_add_shift_and_special_significands::chunk_0425:: ieee754_tests::test_add_shift_and_special_significands::chunk_0426:: ieee754_tests::test_add_shift_and_special_significands::chunk_0427:: ieee754_tests::test_add_shift_and_special_significands::chunk_0428:: ieee754_tests::test_add_shift_and_special_significands::chunk_0429::"
+    },
+    {
+      "name": "add_shift_and_special_significands-43",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0430:: ieee754_tests::test_add_shift_and_special_significands::chunk_0431:: ieee754_tests::test_add_shift_and_special_significands::chunk_0432:: ieee754_tests::test_add_shift_and_special_significands::chunk_0433:: ieee754_tests::test_add_shift_and_special_significands::chunk_0434:: ieee754_tests::test_add_shift_and_special_significands::chunk_0435:: ieee754_tests::test_add_shift_and_special_significands::chunk_0436:: ieee754_tests::test_add_shift_and_special_significands::chunk_0437:: ieee754_tests::test_add_shift_and_special_significands::chunk_0438:: ieee754_tests::test_add_shift_and_special_significands::chunk_0439::"
+    },
+    {
+      "name": "add_shift_and_special_significands-44",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0440:: ieee754_tests::test_add_shift_and_special_significands::chunk_0441:: ieee754_tests::test_add_shift_and_special_significands::chunk_0442:: ieee754_tests::test_add_shift_and_special_significands::chunk_0443:: ieee754_tests::test_add_shift_and_special_significands::chunk_0444:: ieee754_tests::test_add_shift_and_special_significands::chunk_0445:: ieee754_tests::test_add_shift_and_special_significands::chunk_0446:: ieee754_tests::test_add_shift_and_special_significands::chunk_0447:: ieee754_tests::test_add_shift_and_special_significands::chunk_0448:: ieee754_tests::test_add_shift_and_special_significands::chunk_0449::"
+    },
+    {
+      "name": "add_shift_and_special_significands-45",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0450:: ieee754_tests::test_add_shift_and_special_significands::chunk_0451:: ieee754_tests::test_add_shift_and_special_significands::chunk_0452:: ieee754_tests::test_add_shift_and_special_significands::chunk_0453:: ieee754_tests::test_add_shift_and_special_significands::chunk_0454:: ieee754_tests::test_add_shift_and_special_significands::chunk_0455:: ieee754_tests::test_add_shift_and_special_significands::chunk_0456:: ieee754_tests::test_add_shift_and_special_significands::chunk_0457:: ieee754_tests::test_add_shift_and_special_significands::chunk_0458:: ieee754_tests::test_add_shift_and_special_significands::chunk_0459::"
+    },
+    {
+      "name": "add_shift_and_special_significands-46",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0460:: ieee754_tests::test_add_shift_and_special_significands::chunk_0461:: ieee754_tests::test_add_shift_and_special_significands::chunk_0462:: ieee754_tests::test_add_shift_and_special_significands::chunk_0463:: ieee754_tests::test_add_shift_and_special_significands::chunk_0464:: ieee754_tests::test_add_shift_and_special_significands::chunk_0465:: ieee754_tests::test_add_shift_and_special_significands::chunk_0466:: ieee754_tests::test_add_shift_and_special_significands::chunk_0467:: ieee754_tests::test_add_shift_and_special_significands::chunk_0468:: ieee754_tests::test_add_shift_and_special_significands::chunk_0469::"
+    },
+    {
+      "name": "add_shift_and_special_significands-47",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0470:: ieee754_tests::test_add_shift_and_special_significands::chunk_0471:: ieee754_tests::test_add_shift_and_special_significands::chunk_0472:: ieee754_tests::test_add_shift_and_special_significands::chunk_0473:: ieee754_tests::test_add_shift_and_special_significands::chunk_0474:: ieee754_tests::test_add_shift_and_special_significands::chunk_0475:: ieee754_tests::test_add_shift_and_special_significands::chunk_0476:: ieee754_tests::test_add_shift_and_special_significands::chunk_0477:: ieee754_tests::test_add_shift_and_special_significands::chunk_0478:: ieee754_tests::test_add_shift_and_special_significands::chunk_0479::"
+    },
+    {
+      "name": "add_shift_and_special_significands-48",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0480:: ieee754_tests::test_add_shift_and_special_significands::chunk_0481:: ieee754_tests::test_add_shift_and_special_significands::chunk_0482:: ieee754_tests::test_add_shift_and_special_significands::chunk_0483:: ieee754_tests::test_add_shift_and_special_significands::chunk_0484:: ieee754_tests::test_add_shift_and_special_significands::chunk_0485:: ieee754_tests::test_add_shift_and_special_significands::chunk_0486:: ieee754_tests::test_add_shift_and_special_significands::chunk_0487:: ieee754_tests::test_add_shift_and_special_significands::chunk_0488:: ieee754_tests::test_add_shift_and_special_significands::chunk_0489::"
+    },
+    {
+      "name": "add_shift_and_special_significands-49",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0490:: ieee754_tests::test_add_shift_and_special_significands::chunk_0491:: ieee754_tests::test_add_shift_and_special_significands::chunk_0492:: ieee754_tests::test_add_shift_and_special_significands::chunk_0493:: ieee754_tests::test_add_shift_and_special_significands::chunk_0494:: ieee754_tests::test_add_shift_and_special_significands::chunk_0495:: ieee754_tests::test_add_shift_and_special_significands::chunk_0496:: ieee754_tests::test_add_shift_and_special_significands::chunk_0497:: ieee754_tests::test_add_shift_and_special_significands::chunk_0498:: ieee754_tests::test_add_shift_and_special_significands::chunk_0499::"
+    },
+    {
+      "name": "add_shift_and_special_significands-50",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0500:: ieee754_tests::test_add_shift_and_special_significands::chunk_0501:: ieee754_tests::test_add_shift_and_special_significands::chunk_0502:: ieee754_tests::test_add_shift_and_special_significands::chunk_0503:: ieee754_tests::test_add_shift_and_special_significands::chunk_0504:: ieee754_tests::test_add_shift_and_special_significands::chunk_0505:: ieee754_tests::test_add_shift_and_special_significands::chunk_0506:: ieee754_tests::test_add_shift_and_special_significands::chunk_0507:: ieee754_tests::test_add_shift_and_special_significands::chunk_0508:: ieee754_tests::test_add_shift_and_special_significands::chunk_0509::"
+    },
+    {
+      "name": "add_shift_and_special_significands-51",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0510:: ieee754_tests::test_add_shift_and_special_significands::chunk_0511:: ieee754_tests::test_add_shift_and_special_significands::chunk_0512:: ieee754_tests::test_add_shift_and_special_significands::chunk_0513:: ieee754_tests::test_add_shift_and_special_significands::chunk_0514:: ieee754_tests::test_add_shift_and_special_significands::chunk_0515:: ieee754_tests::test_add_shift_and_special_significands::chunk_0516:: ieee754_tests::test_add_shift_and_special_significands::chunk_0517:: ieee754_tests::test_add_shift_and_special_significands::chunk_0518:: ieee754_tests::test_add_shift_and_special_significands::chunk_0519::"
+    },
+    {
+      "name": "add_shift_and_special_significands-52",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0520:: ieee754_tests::test_add_shift_and_special_significands::chunk_0521:: ieee754_tests::test_add_shift_and_special_significands::chunk_0522:: ieee754_tests::test_add_shift_and_special_significands::chunk_0523:: ieee754_tests::test_add_shift_and_special_significands::chunk_0524:: ieee754_tests::test_add_shift_and_special_significands::chunk_0525:: ieee754_tests::test_add_shift_and_special_significands::chunk_0526:: ieee754_tests::test_add_shift_and_special_significands::chunk_0527:: ieee754_tests::test_add_shift_and_special_significands::chunk_0528:: ieee754_tests::test_add_shift_and_special_significands::chunk_0529::"
+    },
+    {
+      "name": "add_shift_and_special_significands-53",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0530:: ieee754_tests::test_add_shift_and_special_significands::chunk_0531:: ieee754_tests::test_add_shift_and_special_significands::chunk_0532:: ieee754_tests::test_add_shift_and_special_significands::chunk_0533:: ieee754_tests::test_add_shift_and_special_significands::chunk_0534:: ieee754_tests::test_add_shift_and_special_significands::chunk_0535:: ieee754_tests::test_add_shift_and_special_significands::chunk_0536:: ieee754_tests::test_add_shift_and_special_significands::chunk_0537:: ieee754_tests::test_add_shift_and_special_significands::chunk_0538:: ieee754_tests::test_add_shift_and_special_significands::chunk_0539::"
+    },
+    {
+      "name": "add_shift_and_special_significands-54",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0540:: ieee754_tests::test_add_shift_and_special_significands::chunk_0541:: ieee754_tests::test_add_shift_and_special_significands::chunk_0542:: ieee754_tests::test_add_shift_and_special_significands::chunk_0543:: ieee754_tests::test_add_shift_and_special_significands::chunk_0544:: ieee754_tests::test_add_shift_and_special_significands::chunk_0545:: ieee754_tests::test_add_shift_and_special_significands::chunk_0546:: ieee754_tests::test_add_shift_and_special_significands::chunk_0547:: ieee754_tests::test_add_shift_and_special_significands::chunk_0548:: ieee754_tests::test_add_shift_and_special_significands::chunk_0549::"
+    },
+    {
+      "name": "add_shift_and_special_significands-55",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0550:: ieee754_tests::test_add_shift_and_special_significands::chunk_0551:: ieee754_tests::test_add_shift_and_special_significands::chunk_0552:: ieee754_tests::test_add_shift_and_special_significands::chunk_0553:: ieee754_tests::test_add_shift_and_special_significands::chunk_0554:: ieee754_tests::test_add_shift_and_special_significands::chunk_0555:: ieee754_tests::test_add_shift_and_special_significands::chunk_0556:: ieee754_tests::test_add_shift_and_special_significands::chunk_0557:: ieee754_tests::test_add_shift_and_special_significands::chunk_0558:: ieee754_tests::test_add_shift_and_special_significands::chunk_0559::"
+    },
+    {
+      "name": "add_shift_and_special_significands-56",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0560:: ieee754_tests::test_add_shift_and_special_significands::chunk_0561:: ieee754_tests::test_add_shift_and_special_significands::chunk_0562:: ieee754_tests::test_add_shift_and_special_significands::chunk_0563:: ieee754_tests::test_add_shift_and_special_significands::chunk_0564:: ieee754_tests::test_add_shift_and_special_significands::chunk_0565:: ieee754_tests::test_add_shift_and_special_significands::chunk_0566:: ieee754_tests::test_add_shift_and_special_significands::chunk_0567:: ieee754_tests::test_add_shift_and_special_significands::chunk_0568:: ieee754_tests::test_add_shift_and_special_significands::chunk_0569::"
+    },
+    {
+      "name": "add_shift_and_special_significands-57",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0570:: ieee754_tests::test_add_shift_and_special_significands::chunk_0571:: ieee754_tests::test_add_shift_and_special_significands::chunk_0572:: ieee754_tests::test_add_shift_and_special_significands::chunk_0573:: ieee754_tests::test_add_shift_and_special_significands::chunk_0574:: ieee754_tests::test_add_shift_and_special_significands::chunk_0575:: ieee754_tests::test_add_shift_and_special_significands::chunk_0576:: ieee754_tests::test_add_shift_and_special_significands::chunk_0577:: ieee754_tests::test_add_shift_and_special_significands::chunk_0578:: ieee754_tests::test_add_shift_and_special_significands::chunk_0579::"
+    },
+    {
+      "name": "add_shift_and_special_significands-58",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0580:: ieee754_tests::test_add_shift_and_special_significands::chunk_0581:: ieee754_tests::test_add_shift_and_special_significands::chunk_0582:: ieee754_tests::test_add_shift_and_special_significands::chunk_0583:: ieee754_tests::test_add_shift_and_special_significands::chunk_0584:: ieee754_tests::test_add_shift_and_special_significands::chunk_0585:: ieee754_tests::test_add_shift_and_special_significands::chunk_0586:: ieee754_tests::test_add_shift_and_special_significands::chunk_0587:: ieee754_tests::test_add_shift_and_special_significands::chunk_0588:: ieee754_tests::test_add_shift_and_special_significands::chunk_0589::"
+    },
+    {
+      "name": "add_shift_and_special_significands-59",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0590:: ieee754_tests::test_add_shift_and_special_significands::chunk_0591:: ieee754_tests::test_add_shift_and_special_significands::chunk_0592:: ieee754_tests::test_add_shift_and_special_significands::chunk_0593:: ieee754_tests::test_add_shift_and_special_significands::chunk_0594:: ieee754_tests::test_add_shift_and_special_significands::chunk_0595:: ieee754_tests::test_add_shift_and_special_significands::chunk_0596:: ieee754_tests::test_add_shift_and_special_significands::chunk_0597:: ieee754_tests::test_add_shift_and_special_significands::chunk_0598:: ieee754_tests::test_add_shift_and_special_significands::chunk_0599::"
+    },
+    {
+      "name": "add_shift_and_special_significands-60",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0600:: ieee754_tests::test_add_shift_and_special_significands::chunk_0601:: ieee754_tests::test_add_shift_and_special_significands::chunk_0602:: ieee754_tests::test_add_shift_and_special_significands::chunk_0603:: ieee754_tests::test_add_shift_and_special_significands::chunk_0604:: ieee754_tests::test_add_shift_and_special_significands::chunk_0605:: ieee754_tests::test_add_shift_and_special_significands::chunk_0606:: ieee754_tests::test_add_shift_and_special_significands::chunk_0607:: ieee754_tests::test_add_shift_and_special_significands::chunk_0608:: ieee754_tests::test_add_shift_and_special_significands::chunk_0609::"
+    },
+    {
+      "name": "add_shift_and_special_significands-61",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0610:: ieee754_tests::test_add_shift_and_special_significands::chunk_0611:: ieee754_tests::test_add_shift_and_special_significands::chunk_0612:: ieee754_tests::test_add_shift_and_special_significands::chunk_0613:: ieee754_tests::test_add_shift_and_special_significands::chunk_0614:: ieee754_tests::test_add_shift_and_special_significands::chunk_0615:: ieee754_tests::test_add_shift_and_special_significands::chunk_0616:: ieee754_tests::test_add_shift_and_special_significands::chunk_0617:: ieee754_tests::test_add_shift_and_special_significands::chunk_0618:: ieee754_tests::test_add_shift_and_special_significands::chunk_0619::"
+    },
+    {
+      "name": "add_shift_and_special_significands-62",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0620:: ieee754_tests::test_add_shift_and_special_significands::chunk_0621:: ieee754_tests::test_add_shift_and_special_significands::chunk_0622:: ieee754_tests::test_add_shift_and_special_significands::chunk_0623:: ieee754_tests::test_add_shift_and_special_significands::chunk_0624:: ieee754_tests::test_add_shift_and_special_significands::chunk_0625:: ieee754_tests::test_add_shift_and_special_significands::chunk_0626:: ieee754_tests::test_add_shift_and_special_significands::chunk_0627:: ieee754_tests::test_add_shift_and_special_significands::chunk_0628:: ieee754_tests::test_add_shift_and_special_significands::chunk_0629::"
+    },
+    {
+      "name": "add_shift_and_special_significands-63",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0630:: ieee754_tests::test_add_shift_and_special_significands::chunk_0631:: ieee754_tests::test_add_shift_and_special_significands::chunk_0632:: ieee754_tests::test_add_shift_and_special_significands::chunk_0633:: ieee754_tests::test_add_shift_and_special_significands::chunk_0634:: ieee754_tests::test_add_shift_and_special_significands::chunk_0635:: ieee754_tests::test_add_shift_and_special_significands::chunk_0636:: ieee754_tests::test_add_shift_and_special_significands::chunk_0637:: ieee754_tests::test_add_shift_and_special_significands::chunk_0638:: ieee754_tests::test_add_shift_and_special_significands::chunk_0639::"
+    },
+    {
+      "name": "add_shift_and_special_significands-64",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0640:: ieee754_tests::test_add_shift_and_special_significands::chunk_0641:: ieee754_tests::test_add_shift_and_special_significands::chunk_0642:: ieee754_tests::test_add_shift_and_special_significands::chunk_0643:: ieee754_tests::test_add_shift_and_special_significands::chunk_0644:: ieee754_tests::test_add_shift_and_special_significands::chunk_0645:: ieee754_tests::test_add_shift_and_special_significands::chunk_0646:: ieee754_tests::test_add_shift_and_special_significands::chunk_0647:: ieee754_tests::test_add_shift_and_special_significands::chunk_0648:: ieee754_tests::test_add_shift_and_special_significands::chunk_0649::"
+    },
+    {
+      "name": "add_shift_and_special_significands-65",
+      "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_0650:: ieee754_tests::test_add_shift_and_special_significands::chunk_0651:: ieee754_tests::test_add_shift_and_special_significands::chunk_0652:: ieee754_tests::test_add_shift_and_special_significands::chunk_0653:: ieee754_tests::test_add_shift_and_special_significands::chunk_0654:: ieee754_tests::test_add_shift_and_special_significands::chunk_0655:: ieee754_tests::test_add_shift_and_special_significands::chunk_0656:: ieee754_tests::test_add_shift_and_special_significands::chunk_0657:: ieee754_tests::test_add_shift_and_special_significands::chunk_0658::"
+    },
+    {
+      "name": "add_shift",
+      "pattern": "ieee754_tests::test_add_shift::"
+    },
+    {
+      "name": "basic_types_inputs-0",
+      "pattern": "ieee754_tests::test_basic_types_inputs::chunk_0000:: ieee754_tests::test_basic_types_inputs::chunk_0001:: ieee754_tests::test_basic_types_inputs::chunk_0002:: ieee754_tests::test_basic_types_inputs::chunk_0003:: ieee754_tests::test_basic_types_inputs::chunk_0004:: ieee754_tests::test_basic_types_inputs::chunk_0005:: ieee754_tests::test_basic_types_inputs::chunk_0006:: ieee754_tests::test_basic_types_inputs::chunk_0007:: ieee754_tests::test_basic_types_inputs::chunk_0008:: ieee754_tests::test_basic_types_inputs::chunk_0009::"
+    },
+    {
+      "name": "basic_types_inputs-1",
+      "pattern": "ieee754_tests::test_basic_types_inputs::chunk_0010:: ieee754_tests::test_basic_types_inputs::chunk_0011:: ieee754_tests::test_basic_types_inputs::chunk_0012:: ieee754_tests::test_basic_types_inputs::chunk_0013:: ieee754_tests::test_basic_types_inputs::chunk_0014:: ieee754_tests::test_basic_types_inputs::chunk_0015:: ieee754_tests::test_basic_types_inputs::chunk_0016:: ieee754_tests::test_basic_types_inputs::chunk_0017:: ieee754_tests::test_basic_types_inputs::chunk_0018:: ieee754_tests::test_basic_types_inputs::chunk_0019::"
+    },
+    {
+      "name": "basic_types_inputs-2",
+      "pattern": "ieee754_tests::test_basic_types_inputs::chunk_0020:: ieee754_tests::test_basic_types_inputs::chunk_0021:: ieee754_tests::test_basic_types_inputs::chunk_0022:: ieee754_tests::test_basic_types_inputs::chunk_0023:: ieee754_tests::test_basic_types_inputs::chunk_0024:: ieee754_tests::test_basic_types_inputs::chunk_0025:: ieee754_tests::test_basic_types_inputs::chunk_0026:: ieee754_tests::test_basic_types_inputs::chunk_0027:: ieee754_tests::test_basic_types_inputs::chunk_0028:: ieee754_tests::test_basic_types_inputs::chunk_0029::"
+    },
+    {
+      "name": "basic_types_inputs-3",
+      "pattern": "ieee754_tests::test_basic_types_inputs::chunk_0030:: ieee754_tests::test_basic_types_inputs::chunk_0031:: ieee754_tests::test_basic_types_inputs::chunk_0032:: ieee754_tests::test_basic_types_inputs::chunk_0033:: ieee754_tests::test_basic_types_inputs::chunk_0034:: ieee754_tests::test_basic_types_inputs::chunk_0035::"
+    },
+    {
+      "name": "basic_types_intermediate",
+      "pattern": "ieee754_tests::test_basic_types_intermediate::"
+    },
+    {
+      "name": "hamming_distance",
+      "pattern": "ieee754_tests::test_hamming_distance::"
+    },
+    {
+      "name": "overflow",
+      "pattern": "ieee754_tests::test_overflow::"
+    },
+    {
+      "name": "rounding",
+      "pattern": "ieee754_tests::test_rounding::"
+    },
+    {
+      "name": "underflow",
+      "pattern": "ieee754_tests::test_underflow::"
+    },
+    {
+      "name": "vicinity_of_rounding_boundaries",
+      "pattern": "ieee754_tests::test_vicinity_of_rounding_boundaries::"
+    }
+  ]
+}
