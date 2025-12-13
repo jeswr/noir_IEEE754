@@ -1,0 +1,134 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  # First, generate the test matrix
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      noir-versions: ${{ steps.versions.outputs.versions }}
+      test-groups: ${{ steps.groups.outputs.groups }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Read Noir versions
+        id: versions
+        run: |
+          VERSIONS=$(jq -c '.versions' .github/noir-versions.json)
+          echo "versions=$VERSIONS" >> $GITHUB_OUTPUT
+          echo "Noir versions: $VERSIONS"
+
+      - name: Generate test groups
+        id: groups
+        run: |
+          # Define test groups - each group runs ~500 tests (20 chunks of 25 tests each)
+          # Group by test module to make it easier to identify failures
+          GROUPS='[
+            {"name": "unit-tests", "pattern": "test_float32 test_float64"},
+            {"name": "add-shift", "pattern": "ieee754_tests::test_add_shift::"},
+            {"name": "add-cancellation", "pattern": "ieee754_tests::test_add_cancellation::"},
+            {"name": "add-cancellation-subnorm", "pattern": "ieee754_tests::test_add_cancellation_and_subnorm_result::"},
+            {"name": "basic-types", "pattern": "ieee754_tests::test_basic_types_inputs:: ieee754_tests::test_basic_types_intermediate::"},
+            {"name": "special-cases", "pattern": "ieee754_tests::test_hamming_distance:: ieee754_tests::test_overflow:: ieee754_tests::test_rounding:: ieee754_tests::test_underflow:: ieee754_tests::test_vicinity_of_rounding_boundaries::"},
+            {"name": "special-sig-0", "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_00"},
+            {"name": "special-sig-1", "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_01"},
+            {"name": "special-sig-2", "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_02"},
+            {"name": "special-sig-3", "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_03"},
+            {"name": "special-sig-4", "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_04"},
+            {"name": "special-sig-5", "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_05"},
+            {"name": "special-sig-6", "pattern": "ieee754_tests::test_add_shift_and_special_significands::chunk_06"}
+          ]'
+          echo "groups=$(echo $GROUPS | jq -c .)" >> $GITHUB_OUTPUT
+
+  # Lint and format check
+  lint:
+    runs-on: ubuntu-latest
+    needs: setup
+    strategy:
+      matrix:
+        noir-version: ${{ fromJson(needs.setup.outputs.noir-versions) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Noir
+        uses: noir-lang/noirup@v0.1.4
+        with:
+          toolchain: ${{ matrix.noir-version }}
+
+      - name: Check format
+        run: nargo fmt --check
+
+  # Run tests in parallel groups
+  test:
+    runs-on: ubuntu-latest
+    needs: setup
+    strategy:
+      fail-fast: false
+      matrix:
+        noir-version: ${{ fromJson(needs.setup.outputs.noir-versions) }}
+        group: ${{ fromJson(needs.setup.outputs.test-groups) }}
+    name: test (${{ matrix.noir-version }}, ${{ matrix.group.name }})
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Noir
+        uses: noir-lang/noirup@v0.1.4
+        with:
+          toolchain: ${{ matrix.noir-version }}
+
+      - name: Run tests - ${{ matrix.group.name }}
+        run: |
+          # Run each pattern in the group
+          for pattern in ${{ matrix.group.pattern }}; do
+            echo "Running tests matching: $pattern"
+            nargo test "$pattern" || exit 1
+          done
+
+  # Generate tests job (validates test generation works)
+  generate-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate test generation
+        run: |
+          # Generate tests and verify no errors
+          python3 scripts/generate_tests.py --list
+          echo "Test generation script validated successfully"
+
+  # Summary job that depends on all test jobs
+  test-summary:
+    runs-on: ubuntu-latest
+    needs: [lint, test, generate-tests]
+    if: always()
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.lint.result }}" != "success" ]; then
+            echo "Lint failed"
+            exit 1
+          fi
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            echo "Tests failed"
+            exit 1
+          fi
+          if [ "${{ needs.generate-tests.result }}" != "success" ]; then
+            echo "Test generation failed"
+            exit 1
+          fi
+          echo "All checks passed!"
