@@ -39,7 +39,7 @@ jobs:
           python-version: '3.12'
 
       - name: Generate IEEE 754 tests
-        run: python3 scripts/generate_tests.py --all
+        run: python3 scripts/generate_tests.py --all --split --output-dir src/ieee754_tests
 
       - name: Upload generated tests
         uses: actions/upload-artifact@v4
