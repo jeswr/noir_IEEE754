@@ -366,15 +366,15 @@ def generate_noir_test_name(test: TestCase, index: int) -> str:
 def generate_noir_test(test: TestCase, index: int, add_debug: bool = False) -> Optional[str]:
     """Generate Noir test code for a single test case."""
     
-    # Only support add and subtract for now (what's implemented)
-    if test.operation not in (Operation.ADD, Operation.SUBTRACT):
+    # Support add, subtract, multiply, and divide
+    if test.operation not in (Operation.ADD, Operation.SUBTRACT, Operation.MULTIPLY, Operation.DIVIDE):
         return None
     
     # Only support round-to-nearest-even for now
     if test.rounding != RoundingMode.NEAREST_EVEN:
         return None
     
-    # Need two operands for add/subtract
+    # Need two operands for binary operations
     if test.operand2 is None:
         return None
     
@@ -391,12 +391,36 @@ def generate_noir_test(test: TestCase, index: int, add_debug: bool = False) -> O
     
     # Compute expected result using Python's IEEE 754 hardware
     f1, f2 = from_bits(bits1), from_bits(bits2)
-    result_float = f1 + f2 if test.operation == Operation.ADD else f1 - f2
+    
+    # Compute result based on operation
+    if test.operation == Operation.ADD:
+        result_float = f1 + f2
+    elif test.operation == Operation.SUBTRACT:
+        result_float = f1 - f2
+    elif test.operation == Operation.MULTIPLY:
+        result_float = f1 * f2
+    elif test.operation == Operation.DIVIDE:
+        # Handle division by zero
+        if f2 == 0.0:
+            if f1 == 0.0:
+                result_float = float('nan')
+            else:
+                result_float = math.copysign(float('inf'), f1 * f2) if f2 == 0.0 else f1 / f2
+        else:
+            result_float = f1 / f2
+    else:
+        return None
+    
     expected = (float32_to_bits if is_float32 else float64_to_bits)(result_float)
     
-    # For subtraction, negate second operand and use addition
-    if test.operation == Operation.SUBTRACT:
-        bits2 ^= sign_bit
+    # Determine the Noir function to call
+    op_func_map = {
+        Operation.ADD: "add",
+        Operation.SUBTRACT: "sub",
+        Operation.MULTIPLY: "mul",
+        Operation.DIVIDE: "div",
+    }
+    op_func = op_func_map[test.operation]
     
     # Format values
     test_name = generate_noir_test_name(test, index)
@@ -420,47 +444,41 @@ fn {test_name}() {{
     // {test.raw_line}
     let a = float{prec}_from_bits({bits1_str});
     let b = float{prec}_from_bits({bits2_str});
-    let result = add_float{prec}(a, b);
+    let result = {op_func}_float{prec}(a, b);
     {assertion}
 }}
 """
 
 
-def analyze_test_code(test_code: list[str]) -> tuple[bool, bool, bool, bool, bool, bool]:
+def analyze_test_code(test_code: list[str]) -> dict[str, bool]:
     """Analyze test code to determine which imports are needed.
     
-    Returns: (has_float32, has_float64, has_float32_to_bits, has_float64_to_bits, has_float32_nan, has_float64_nan)
+    Returns a dict of import flags.
     """
     code_str = "\n".join(test_code)
-    has_float32 = "add_float32" in code_str
-    has_float64 = "add_float64" in code_str
-    has_float32_to_bits = "float32_to_bits" in code_str
-    has_float64_to_bits = "float64_to_bits" in code_str
-    has_float32_nan = "float32_is_nan" in code_str
-    has_float64_nan = "float64_is_nan" in code_str
-    return has_float32, has_float64, has_float32_to_bits, has_float64_to_bits, has_float32_nan, has_float64_nan
+    return {
+        # Float32 operations
+        'add_float32': "add_float32" in code_str,
+        'sub_float32': "sub_float32" in code_str,
+        'mul_float32': "mul_float32" in code_str,
+        'div_float32': "div_float32" in code_str,
+        'float32_from_bits': "float32_from_bits" in code_str,
+        'float32_to_bits': "float32_to_bits" in code_str,
+        'float32_is_nan': "float32_is_nan" in code_str,
+        # Float64 operations
+        'add_float64': "add_float64" in code_str,
+        'sub_float64': "sub_float64" in code_str,
+        'mul_float64': "mul_float64" in code_str,
+        'div_float64': "div_float64" in code_str,
+        'float64_from_bits': "float64_from_bits" in code_str,
+        'float64_to_bits': "float64_to_bits" in code_str,
+        'float64_is_nan': "float64_is_nan" in code_str,
+    }
 
 
-def generate_noir_header_from_analysis(source_info: str, analysis: tuple) -> str:
+def generate_noir_header_from_analysis(source_info: str, analysis: dict[str, bool]) -> str:
     """Generate Noir test file header with only required imports."""
-    has_float32, has_float64, has_float32_to_bits, has_float64_to_bits, has_float32_nan, has_float64_nan = analysis
-    imports = []
-    
-    if has_float32:
-        imports.append("add_float32")
-        imports.append("float32_from_bits")
-    if has_float32_to_bits:
-        imports.append("float32_to_bits")
-    if has_float32_nan:
-        imports.append("float32_is_nan")
-    
-    if has_float64:
-        imports.append("add_float64")
-        imports.append("float64_from_bits")
-    if has_float64_to_bits:
-        imports.append("float64_to_bits")
-    if has_float64_nan:
-        imports.append("float64_is_nan")
+    imports = [name for name, needed in analysis.items() if needed]
     
     # Sort imports for consistency
     imports.sort()
@@ -722,9 +740,8 @@ Examples:
     parser.add_argument(
         '--operation',
         choices=['add', 'sub', 'mul', 'div', 'all'],
-        default='add',
-        help='Filter by operation type (default: add)'
-    )
+        default='all',
+        help='Filter by operation type (default: all)')
     parser.add_argument(
         '--precision',
         choices=['f32', 'f64', 'all'],

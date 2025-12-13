@@ -46,11 +46,16 @@ if shifted_out != 0 { result | 1 } else { result }
 ## Developer Commands
 
 ```bash
-# Generate tests (default: Add-Shift.fptest)
+# Generate tests (default: all operations from Add-Shift.fptest)
 python3 scripts/generate_tests.py -o src/ieee754_tests.nr
 
-# Generate all ~18k tests
-python3 scripts/generate_tests.py --all -o src/ieee754_tests.nr
+# Generate all ~18k tests (all operations)
+python3 scripts/generate_tests.py --all --split
+
+# Generate tests for specific operations
+python3 scripts/generate_tests.py --all --operation add --split
+python3 scripts/generate_tests.py --all --operation mul --split
+python3 scripts/generate_tests.py --all --operation div --split
 
 # Run specific test module (RECOMMENDED - full suite takes hours)
 nargo test ieee754_tests::test_add_shift::
@@ -63,6 +68,7 @@ nargo test ieee754_tests::test_add_shift::chunk_0000::test_f32_add_0
 
 # Run manual unit tests only
 nargo test test_float32
+nargo test test_float64
 ```
 
 > ⚠️ **Warning**: Running `nargo test` without filters executes ~18k tests and takes several hours. Always run individual chunks or modules during development.
@@ -73,14 +79,23 @@ b32+ =0 +1.000000P+0 +1.000000P+0 -> +1.000000P+1
 │    │  │            │               │
 │    │  operand1     operand2        expected result
 │    └── rounding mode (=0 = round to nearest even)
-└── precision (b32) and operation (+)
+└── precision (b32) and operation (+, -, *, /)
 ```
 
-## Extending Operations
+## Supported Operations
 
-1. **Subtraction**: Negate second operand, call addition
-2. **Multiplication/Division**: Need new test generation for `*`/`/` operations
-3. **Rounding modes**: Add parameter for `>` (toward +∞), `<` (toward -∞), `0` (toward zero)
+| Operation | Float32 | Float64 | Test Generation |
+|-----------|---------|---------|-----------------|
+| Addition (+) | ✅ `add_float32` | ✅ `add_float64` | `--operation add` |
+| Subtraction (-) | ✅ `sub_float32` | ✅ `sub_float64` | `--operation sub` |
+| Multiplication (*) | ✅ `mul_float32` | ✅ `mul_float64` | `--operation mul` |
+| Division (/) | ✅ `div_float32` | ✅ `div_float64` | `--operation div` |
+
+## Future Extensions
+
+1. **Rounding modes**: Add parameter for `>` (toward +∞), `<` (toward -∞), `0` (toward zero)
+2. **Comparison operations**: Less than, equal, greater than
+3. **Square root**: `sqrt_float32`/`sqrt_float64`
 
 ## Critical Files
 
