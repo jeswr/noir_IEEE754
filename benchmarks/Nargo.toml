@@ -1,0 +1,6 @@
+[package]
+name = "ieee754_benchmarks"
+type = "bin"
+authors = [""]
+
+[dependencies]

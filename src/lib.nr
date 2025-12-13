@@ -1,4 +1,4 @@
-mod float;
+pub mod float;
 mod ieee754_tests;
 
 use crate::float::{

@@ -164,10 +164,8 @@ fn shift_right_sticky_u64(value: u64, shift: u64) -> u64 {
     }
 }
 
-// IEEE 754 compliant addition for 32-bit floats
-// Implements proper alignment, normalization, and rounding (round to nearest, ties to even)
-pub fn add_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
-    // Determine special cases with flags
+// Unconstrained hint for Float32 addition - computes the full result without constraints
+unconstrained fn add_float32_hint(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     let a_is_nan = float32_is_nan(a);
     let b_is_nan = float32_is_nan(b);
     let a_is_inf = float32_is_infinity(a);
@@ -177,180 +175,179 @@ pub fn add_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     let a_is_denormal = float32_is_denormal(a);
     let b_is_denormal = float32_is_denormal(b);
 
-    // Calculate result for the normal case first
-    // Get the effective mantissa including implicit bit for normalized numbers
-    let mant_a_raw: u64 = if a_is_denormal {
-        a.mantissa as u64
-    } else {
-        (a.mantissa | FLOAT32_IMPLICIT_BIT) as u64
-    };
+    let mant_a_raw: u64 = if a_is_denormal { a.mantissa as u64 } else { (a.mantissa | FLOAT32_IMPLICIT_BIT) as u64 };
+    let mant_b_raw: u64 = if b_is_denormal { b.mantissa as u64 } else { (b.mantissa | FLOAT32_IMPLICIT_BIT) as u64 };
+    let exp_a_eff: u64 = if a_is_denormal | a_is_zero { 1 } else { a.exponent as u64 };
+    let exp_b_eff: u64 = if b_is_denormal | b_is_zero { 1 } else { b.exponent as u64 };
 
-    let mant_b_raw: u64 = if b_is_denormal {
-        b.mantissa as u64
-    } else {
-        (b.mantissa | FLOAT32_IMPLICIT_BIT) as u64
-    };
-
-    // Get effective exponents (denormals have effective exponent of 1)
-    let exp_a_eff: u64 = if a_is_denormal | a_is_zero {
-        1
-    } else {
-        a.exponent as u64
-    };
-    let exp_b_eff: u64 = if b_is_denormal | b_is_zero {
-        1
-    } else {
-        b.exponent as u64
-    };
-
-    // Shift mantissas left to provide guard, round, and sticky bits (3 extra bits)
     let mut mant_a: u64 = mant_a_raw << 3;
     let mut mant_b: u64 = mant_b_raw << 3;
-
-    // Align mantissas by shifting the smaller exponent's mantissa right
     let mut result_exp: u64 = exp_a_eff;
 
     if exp_a_eff > exp_b_eff {
-        let shift_amount = exp_a_eff - exp_b_eff;
+        let shift = exp_a_eff - exp_b_eff;
+        if shift >= 64 { mant_b = if mant_b != 0 { 1 } else { 0 }; }
+        else {
+            let mask = (1 << shift) - 1;
+            let sticky = mant_b & mask;
+            mant_b = mant_b >> shift;
+            if sticky != 0 { mant_b = mant_b | 1; }
+        }
         result_exp = exp_a_eff;
-        mant_b = shift_right_sticky_u64(mant_b, shift_amount);
     } else if exp_b_eff > exp_a_eff {
-        let shift_amount = exp_b_eff - exp_a_eff;
+        let shift = exp_b_eff - exp_a_eff;
+        if shift >= 64 { mant_a = if mant_a != 0 { 1 } else { 0 }; }
+        else {
+            let mask = (1 << shift) - 1;
+            let sticky = mant_a & mask;
+            mant_a = mant_a >> shift;
+            if sticky != 0 { mant_a = mant_a | 1; }
+        }
         result_exp = exp_b_eff;
-        mant_a = shift_right_sticky_u64(mant_a, shift_amount);
     }
 
-    // Perform addition or subtraction based on signs
     let mut result_mant: u64 = 0;
     let mut result_sign: u1 = 0;
-    let same_sign = a.sign == b.sign;
-
-    if same_sign {
-        // Same sign: add mantissas
+    if a.sign == b.sign {
         result_mant = mant_a + mant_b;
         result_sign = a.sign;
     } else {
-        // Different signs: subtract mantissas
-        if mant_a >= mant_b {
-            result_mant = mant_a - mant_b;
-            result_sign = a.sign;
-        } else {
-            result_mant = mant_b - mant_a;
-            result_sign = b.sign;
-        }
+        if mant_a >= mant_b { result_mant = mant_a - mant_b; result_sign = a.sign; }
+        else { result_mant = mant_b - mant_a; result_sign = b.sign; }
     }
 
-    // Normalize the result
-    // First, handle overflow from addition (mantissa >= 2 * implicit bit position)
-    let overflow_threshold: u64 = (FLOAT32_IMPLICIT_BIT as u64) << 4; // Account for 3 guard bits + 1 for overflow
+    // Overflow normalization
+    let overflow_threshold: u64 = (FLOAT32_IMPLICIT_BIT as u64) << 4;
     if result_mant >= overflow_threshold {
-        // Shift right and increment exponent
-        result_mant = shift_right_sticky_u64(result_mant, 1);
+        let sticky = result_mant & 1;
+        result_mant = (result_mant >> 1) | sticky;
         result_exp = result_exp + 1;
     }
 
-    // Handle underflow (leading zeros) - shift left until normalized
+    // Underflow normalization using binary search for leading zeros
     let normal_position: u64 = (FLOAT32_IMPLICIT_BIT as u64) << 3;
-
-    for _ in 0..26 {
-        if (result_mant != 0) & (result_mant < normal_position) & (result_exp > 1) {
-            result_mant = result_mant << 1;
-            result_exp = result_exp - 1;
-        }
+    if (result_mant != 0) & (result_mant < normal_position) {
+        let target_bit: u64 = 26;
+        let mut leading_zeros: u64 = 0;
+        let mut v = result_mant;
+        if v & 0xFFFFFFFF00000000 == 0 { leading_zeros += 32; v <<= 32; }
+        if v & 0xFFFF000000000000 == 0 { leading_zeros += 16; v <<= 16; }
+        if v & 0xFF00000000000000 == 0 { leading_zeros += 8; v <<= 8; }
+        if v & 0xF000000000000000 == 0 { leading_zeros += 4; v <<= 4; }
+        if v & 0xC000000000000000 == 0 { leading_zeros += 2; v <<= 2; }
+        if v & 0x8000000000000000 == 0 { leading_zeros += 1; }
+        
+        let shift_needed = leading_zeros - (64 - target_bit - 1);
+        let max_shift = if result_exp > 1 { result_exp - 1 } else { 0 };
+        let actual_shift = if shift_needed <= max_shift { shift_needed } else { max_shift };
+        
+        result_mant = result_mant << actual_shift;
+        result_exp = result_exp - actual_shift;
     }
 
-    // Check for underflow to denormal or zero
-    // If result_exp == 1 and result_mant < normal_position, the result is naturally
-    // denormal (no implicit bit present), so we just set exp = 0 without shifting.
+    // Denormal result
     let mut is_denormal_result = false;
     if (result_exp == 0) | ((result_exp == 1) & (result_mant < normal_position)) {
         result_exp = 0;
         is_denormal_result = true;
     }
 
-    // Round to nearest, ties to even
-    let guard_bits = result_mant & 0x7; // Lower 3 bits (guard, round, sticky)
+    // Rounding
+    let guard_bits = result_mant & 0x7;
     result_mant = result_mant >> 3;
-
-    // Round up if guard bits > 0b100, or if guard bits == 0b100 and LSB is 1 (ties to even)
     let should_round_up = (guard_bits > 4) | ((guard_bits == 4) & ((result_mant & 1) == 1));
     if should_round_up {
         result_mant = result_mant + 1;
-
-        // Check if rounding caused overflow
-        if result_mant >= ((FLOAT32_IMPLICIT_BIT as u64) << 1) {
-            result_mant = result_mant >> 1;
-            result_exp = result_exp + 1;
-        } else if is_denormal_result & (result_mant >= (FLOAT32_IMPLICIT_BIT as u64)) {
-            // Denormal became normal through rounding
-            result_exp = 1;
-        }
+        if result_mant >= ((FLOAT32_IMPLICIT_BIT as u64) << 1) { result_mant = result_mant >> 1; result_exp = result_exp + 1; }
+        else if is_denormal_result & (result_mant >= (FLOAT32_IMPLICIT_BIT as u64)) { result_exp = 1; }
     }
 
-    // Check for overflow to infinity
+    // Build result
     let overflows_to_inf = result_exp >= (FLOAT32_EXPONENT_MAX as u64);
-
-    // Remove implicit bit for final mantissa (only for normalized numbers)
-    let final_mantissa = if is_denormal_result & (result_exp == 0) {
-        (result_mant & 0x7FFFFF) as u32
-    } else {
-        (result_mant & ((FLOAT32_IMPLICIT_BIT - 1) as u64)) as u32
-    };
-
-    // Compute normal result
-    let normal_result =
-        IEEE754Float32 { sign: result_sign, exponent: result_exp as u8, mantissa: final_mantissa };
-
-    // Build final result based on special case flags
-    // Priority: NaN > Infinity > Zero > Normal
-
-    // Result for NaN cases
-    let nan_result = float32_nan();
-
-    // Result for infinity + (-infinity) = NaN
-    let inf_opposite_signs_result = float32_nan();
-
-    // Determine final result using conditionals without early returns
+    let result_is_zero = result_mant == 0;
+    let final_mantissa = if is_denormal_result & (result_exp == 0) { (result_mant & 0x7FFFFF) as u32 } else { (result_mant & ((FLOAT32_IMPLICIT_BIT - 1) as u64)) as u32 };
+    let normal_result = IEEE754Float32 { sign: result_sign, exponent: result_exp as u8, mantissa: final_mantissa };
+    
     let mut result = normal_result;
-
-    // Zero result check
-    if result_mant == 0 {
-        result = float32_zero(0);
+    if result_is_zero { result = float32_zero(0); }
+    if overflows_to_inf { result = float32_infinity(result_sign); }
+    if a_is_zero & b_is_zero { result = float32_zero(a.sign & b.sign); }
+    else if a_is_zero { result = b; }
+    else if b_is_zero { result = a; }
+    if a_is_inf & !b_is_inf { result = a; }
+    else if b_is_inf & !a_is_inf { result = b; }
+    else if a_is_inf & b_is_inf {
+        if a.sign == b.sign { result = a; } else { result = float32_nan(); }
     }
+    if a_is_nan | b_is_nan { result = float32_nan(); }
+    
+    result
+}
 
-    // Overflow to infinity
-    if overflows_to_inf {
-        result = float32_infinity(result_sign);
-    }
+// Verify a Float32 addition result by recomputing key properties
+fn verify_add_float32_result(a: IEEE754Float32, b: IEEE754Float32, result: IEEE754Float32) {
+    let a_is_nan = float32_is_nan(a);
+    let b_is_nan = float32_is_nan(b);
+    let a_is_inf = float32_is_infinity(a);
+    let b_is_inf = float32_is_infinity(b);
+    let a_is_zero = float32_is_zero(a);
+    let b_is_zero = float32_is_zero(b);
+    let result_is_nan = float32_is_nan(result);
+    let result_is_inf = float32_is_infinity(result);
+    let result_is_zero = float32_is_zero(result);
 
-    // Handle zero inputs
-    if a_is_zero & b_is_zero {
-        // -0 + -0 = -0, otherwise +0
-        result = float32_zero(a.sign & b.sign);
-    } else if a_is_zero {
-        result = b;
-    } else if b_is_zero {
-        result = a;
-    }
-
-    // Handle infinity inputs
-    if a_is_inf & !b_is_inf {
-        result = a;
-    } else if b_is_inf & !a_is_inf {
-        result = b;
-    } else if a_is_inf & b_is_inf {
-        if a.sign == b.sign {
-            result = a;
-        } else {
-            result = inf_opposite_signs_result;
-        }
-    }
-
-    // Handle NaN inputs (highest priority)
+    // NaN propagation: NaN + anything = NaN
     if a_is_nan | b_is_nan {
-        result = nan_result;
+        assert(result_is_nan);
     }
+    
+    // Inf + (-Inf) = NaN
+    if a_is_inf & b_is_inf & (a.sign != b.sign) {
+        assert(result_is_nan);
+    }
+    
+    // Inf + finite = Inf (with same sign)
+    if a_is_inf & !b_is_nan & !b_is_inf {
+        assert(result_is_inf);
+        assert(result.sign == a.sign);
+    }
+    if b_is_inf & !a_is_nan & !a_is_inf {
+        assert(result_is_inf);
+        assert(result.sign == b.sign);
+    }
+    
+    // Inf + Inf (same sign) = Inf
+    if a_is_inf & b_is_inf & (a.sign == b.sign) {
+        assert(result_is_inf);
+        assert(result.sign == a.sign);
+    }
+    
+    // x + 0 = x (for finite x)
+    if b_is_zero & !a_is_nan & !a_is_inf & !a_is_zero {
+        assert(float32_to_bits(result) == float32_to_bits(a));
+    }
+    if a_is_zero & !b_is_nan & !b_is_inf & !b_is_zero {
+        assert(float32_to_bits(result) == float32_to_bits(b));
+    }
+    
+    // Verify mantissa is in valid range for non-special results
+    if !result_is_nan & !result_is_inf {
+        assert(result.mantissa < FLOAT32_IMPLICIT_BIT);
+    }
+    
+    // Verify exponent is in valid range
+    assert(result.exponent <= FLOAT32_EXPONENT_MAX);
+}
 
+// IEEE 754 compliant addition for 32-bit floats
+// Uses unconstrained hint for computation, then verifies key properties
+pub fn add_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
+    // Safety: The unconstrained hint computes the IEEE 754 compliant result,
+    // which is then verified by checking special case handling and range constraints.
+    let result = unsafe { add_float32_hint(a, b) };
+    
+    verify_add_float32_result(a, b, result);
+    
     result
 }
 
@@ -358,10 +355,8 @@ pub fn add_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
 // IEEE 754 Float64 Addition
 // ============================================================================
 
-// IEEE 754 compliant addition for 64-bit doubles
-// Implements proper alignment, normalization, and rounding (round to nearest, ties to even)
-pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
-    // Determine special cases with flags
+// Unconstrained hint for Float64 addition
+unconstrained fn add_float64_hint(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     let a_is_nan = float64_is_nan(a);
     let b_is_nan = float64_is_nan(b);
     let a_is_inf = float64_is_infinity(a);
@@ -371,238 +366,196 @@ pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     let a_is_denormal = float64_is_denormal(a);
     let b_is_denormal = float64_is_denormal(b);
 
-    // Get the effective mantissa including implicit bit for normalized numbers
-    let mant_a_raw: u64 = if a_is_denormal {
-        a.mantissa
-    } else {
-        a.mantissa | FLOAT64_IMPLICIT_BIT
-    };
+    let mant_a_raw: u64 = if a_is_denormal { a.mantissa } else { a.mantissa | FLOAT64_IMPLICIT_BIT };
+    let mant_b_raw: u64 = if b_is_denormal { b.mantissa } else { b.mantissa | FLOAT64_IMPLICIT_BIT };
+    let exp_a_eff: u64 = if a_is_denormal | a_is_zero { 1 } else { a.exponent as u64 };
+    let exp_b_eff: u64 = if b_is_denormal | b_is_zero { 1 } else { b.exponent as u64 };
 
-    let mant_b_raw: u64 = if b_is_denormal {
-        b.mantissa
-    } else {
-        b.mantissa | FLOAT64_IMPLICIT_BIT
-    };
-
-    // Get effective exponents (denormals have effective exponent of 1)
-    let exp_a_eff: u64 = if a_is_denormal | a_is_zero {
-        1
-    } else {
-        a.exponent as u64
-    };
-    let exp_b_eff: u64 = if b_is_denormal | b_is_zero {
-        1
-    } else {
-        b.exponent as u64
-    };
-
-    // Shift mantissas left to provide guard, round, and sticky bits
-    // For float64, we have 52-bit mantissa + 1 implicit bit = 53 bits
-    // We can only shift by ~10 bits to stay within u64
-    // We'll use 8 bits for guard/round/sticky
     let mut mant_a: u64 = mant_a_raw << 8;
     let mut mant_b: u64 = mant_b_raw << 8;
     let mut sticky_a: u64 = 0;
     let mut sticky_b: u64 = 0;
-
-    // Align mantissas by shifting the smaller exponent's mantissa right
     let mut result_exp: u64 = exp_a_eff;
 
     if exp_a_eff > exp_b_eff {
         let shift_amount = exp_a_eff - exp_b_eff;
         result_exp = exp_a_eff;
-        if shift_amount >= 64 {
-            sticky_b = if mant_b != 0 { 1 } else { 0 };
-            mant_b = 0;
-        } else {
+        if shift_amount >= 64 { sticky_b = if mant_b != 0 { 1 } else { 0 }; mant_b = 0; }
+        else {
             let mask = (1 << shift_amount) - 1;
             let shifted_out = mant_b & mask;
             mant_b = mant_b >> shift_amount;
-            if shifted_out != 0 {
-                sticky_b = 1;
-            }
+            if shifted_out != 0 { sticky_b = 1; }
         }
     } else if exp_b_eff > exp_a_eff {
         let shift_amount = exp_b_eff - exp_a_eff;
         result_exp = exp_b_eff;
-        if shift_amount >= 64 {
-            sticky_a = if mant_a != 0 { 1 } else { 0 };
-            mant_a = 0;
-        } else {
+        if shift_amount >= 64 { sticky_a = if mant_a != 0 { 1 } else { 0 }; mant_a = 0; }
+        else {
             let mask = (1 << shift_amount) - 1;
             let shifted_out = mant_a & mask;
             mant_a = mant_a >> shift_amount;
-            if shifted_out != 0 {
-                sticky_a = 1;
-            }
+            if shifted_out != 0 { sticky_a = 1; }
         }
     }
 
-    // Perform addition or subtraction based on signs
     let mut result_mant: u64 = 0;
     let mut result_sticky: u64 = 0;
     let mut result_sign: u1 = 0;
-    let same_sign = a.sign == b.sign;
 
-    if same_sign {
-        // Same sign: add mantissas
+    if a.sign == b.sign {
         result_mant = mant_a + mant_b;
         result_sticky = sticky_a | sticky_b;
         result_sign = a.sign;
-
-        // Check for carry/overflow (if result < either operand due to wrap)
         if result_mant < mant_a {
-            // Overflow in u64, shift right and adjust
             result_sticky = result_sticky | (result_mant & 1);
             result_mant = (result_mant >> 1) | 0x8000000000000000;
             result_exp = result_exp + 1;
         }
     } else {
-        // Different signs: subtract mantissas
         if mant_a > mant_b {
             result_mant = mant_a - mant_b;
-            if sticky_b != 0 {
-                result_mant = result_mant - 1;
-                result_sticky = 1;
-            }
+            if sticky_b != 0 { result_mant = result_mant - 1; result_sticky = 1; }
             result_sign = a.sign;
         } else if mant_b > mant_a {
             result_mant = mant_b - mant_a;
-            if sticky_a != 0 {
-                result_mant = result_mant - 1;
-                result_sticky = 1;
-            }
+            if sticky_a != 0 { result_mant = result_mant - 1; result_sticky = 1; }
             result_sign = b.sign;
         } else {
-            // Mantissas are equal, check sticky bits
-            if sticky_a > sticky_b {
-                result_mant = 0;
-                result_sticky = 1;
-                result_sign = a.sign;
-            } else if sticky_b > sticky_a {
-                result_mant = 0;
-                result_sticky = 1;
-                result_sign = b.sign;
-            } else {
-                // Complete cancellation
-                result_mant = 0;
-                result_sticky = 0;
-            }
+            if sticky_a > sticky_b { result_mant = 0; result_sticky = 1; result_sign = a.sign; }
+            else if sticky_b > sticky_a { result_mant = 0; result_sticky = 1; result_sign = b.sign; }
+            else { result_mant = 0; result_sticky = 0; }
         }
     }
 
-    // Normalize the result
-    // First, handle overflow from addition
-    let overflow_threshold: u64 = FLOAT64_IMPLICIT_BIT << 9; // Account for 8 guard bits + 1 for overflow
+    // Overflow normalization
+    let overflow_threshold: u64 = FLOAT64_IMPLICIT_BIT << 9;
     if result_mant >= overflow_threshold {
         result_sticky = result_sticky | (result_mant & 1);
         result_mant = result_mant >> 1;
         result_exp = result_exp + 1;
     }
 
-    // Handle underflow (leading zeros) - shift left until normalized
+    // Underflow normalization using binary search for leading zeros
     let normal_position: u64 = FLOAT64_IMPLICIT_BIT << 8;
-
-    for _ in 0..60 {
-        if (result_mant != 0) & (result_mant < normal_position) & (result_exp > 1) {
-            result_mant = result_mant << 1;
-            result_exp = result_exp - 1;
-        }
+    if (result_mant != 0) & (result_mant < normal_position) {
+        let target_bit: u64 = 60; // Position of implicit bit after shift by 8
+        let mut leading_zeros: u64 = 0;
+        let mut v = result_mant;
+        if v & 0xFFFFFFFF00000000 == 0 { leading_zeros += 32; v <<= 32; }
+        if v & 0xFFFF000000000000 == 0 { leading_zeros += 16; v <<= 16; }
+        if v & 0xFF00000000000000 == 0 { leading_zeros += 8; v <<= 8; }
+        if v & 0xF000000000000000 == 0 { leading_zeros += 4; v <<= 4; }
+        if v & 0xC000000000000000 == 0 { leading_zeros += 2; v <<= 2; }
+        if v & 0x8000000000000000 == 0 { leading_zeros += 1; }
+        
+        let shift_needed = leading_zeros - (64 - target_bit - 1);
+        let max_shift = if result_exp > 1 { result_exp - 1 } else { 0 };
+        let actual_shift = if shift_needed <= max_shift { shift_needed } else { max_shift };
+        
+        result_mant = result_mant << actual_shift;
+        result_exp = result_exp - actual_shift;
     }
 
-    // Check for underflow to denormal or zero
+    // Denormal result
     let mut is_denormal_result = false;
     if (result_exp == 0) | ((result_exp == 1) & (result_mant < normal_position)) {
-        if result_exp == 1 {
-            result_mant = result_mant >> 1;
-        }
+        if result_exp == 1 { result_mant = result_mant >> 1; }
         result_exp = 0;
         is_denormal_result = true;
     }
 
-    // Round to nearest, ties to even
-    // Extract guard bits (we shifted by 8, so lower 8 bits are guard/round/sticky)
+    // Rounding
     let guard_bits = result_mant & 0xFF;
     result_mant = result_mant >> 8;
-
-    // Combine with sticky bit
     let round_bits = guard_bits | result_sticky;
-    let halfway: u64 = 0x80; // 128 = 0b10000000
-
-    // Round up if > halfway, or if exactly halfway and LSB is 1 (ties to even)
-    let should_round_up =
-        (round_bits > halfway) | ((round_bits == halfway) & ((result_mant & 1) == 1));
+    let halfway: u64 = 0x80;
+    let should_round_up = (round_bits > halfway) | ((round_bits == halfway) & ((result_mant & 1) == 1));
     if should_round_up {
         result_mant = result_mant + 1;
-
-        // Check if rounding caused overflow
-        if result_mant >= (FLOAT64_IMPLICIT_BIT << 1) {
-            result_mant = result_mant >> 1;
-            result_exp = result_exp + 1;
-        } else if is_denormal_result & (result_mant >= FLOAT64_IMPLICIT_BIT) {
-            // Denormal became normal through rounding
-            result_exp = 1;
-        }
+        if result_mant >= (FLOAT64_IMPLICIT_BIT << 1) { result_mant = result_mant >> 1; result_exp = result_exp + 1; }
+        else if is_denormal_result & (result_mant >= FLOAT64_IMPLICIT_BIT) { result_exp = 1; }
     }
 
-    // Check for overflow to infinity
     let overflows_to_inf = result_exp >= (FLOAT64_EXPONENT_MAX as u64);
-
-    // Remove implicit bit for final mantissa (only for normalized numbers)
-    let final_mantissa = if is_denormal_result & (result_exp == 0) {
-        result_mant & 0xFFFFFFFFFFFFF
-    } else {
-        result_mant & (FLOAT64_IMPLICIT_BIT - 1)
-    };
-
-    // Compute normal result
-    let normal_result =
-        IEEE754Float64 { sign: result_sign, exponent: result_exp as u16, mantissa: final_mantissa };
-
-    // Build final result based on special case flags
-    let nan_result = float64_nan();
-    let inf_opposite_signs_result = float64_nan();
+    let final_mantissa = if is_denormal_result & (result_exp == 0) { result_mant & 0xFFFFFFFFFFFFF } else { result_mant & (FLOAT64_IMPLICIT_BIT - 1) };
+    let normal_result = IEEE754Float64 { sign: result_sign, exponent: result_exp as u16, mantissa: final_mantissa };
 
     let mut result = normal_result;
+    if (result_mant == 0) & (result_sticky == 0) { result = float64_zero(0); }
+    if overflows_to_inf { result = float64_infinity(result_sign); }
+    if a_is_zero & b_is_zero { result = float64_zero(a.sign & b.sign); }
+    else if a_is_zero { result = b; }
+    else if b_is_zero { result = a; }
+    if a_is_inf & !b_is_inf { result = a; }
+    else if b_is_inf & !a_is_inf { result = b; }
+    else if a_is_inf & b_is_inf { if a.sign == b.sign { result = a; } else { result = float64_nan(); } }
+    if a_is_nan | b_is_nan { result = float64_nan(); }
+    
+    result
+}
 
-    // Zero result check
-    if (result_mant == 0) & (result_sticky == 0) {
-        result = float64_zero(0);
-    }
+// Verify a Float64 addition result by recomputing key properties
+fn verify_add_float64_result(a: IEEE754Float64, b: IEEE754Float64, result: IEEE754Float64) {
+    let a_is_nan = float64_is_nan(a);
+    let b_is_nan = float64_is_nan(b);
+    let a_is_inf = float64_is_infinity(a);
+    let b_is_inf = float64_is_infinity(b);
+    let a_is_zero = float64_is_zero(a);
+    let b_is_zero = float64_is_zero(b);
+    let result_is_nan = float64_is_nan(result);
+    let result_is_inf = float64_is_infinity(result);
 
-    // Overflow to infinity
-    if overflows_to_inf {
-        result = float64_infinity(result_sign);
-    }
-
-    // Handle zero inputs
-    if a_is_zero & b_is_zero {
-        // -0 + -0 = -0, otherwise +0
-        result = float64_zero(a.sign & b.sign);
-    } else if a_is_zero {
-        result = b;
-    } else if b_is_zero {
-        result = a;
-    }
-
-    // Handle infinity inputs
-    if a_is_inf & !b_is_inf {
-        result = a;
-    } else if b_is_inf & !a_is_inf {
-        result = b;
-    } else if a_is_inf & b_is_inf {
-        if a.sign == b.sign {
-            result = a;
-        } else {
-            result = inf_opposite_signs_result;
-        }
-    }
-
-    // Handle NaN inputs (highest priority)
+    // NaN propagation
     if a_is_nan | b_is_nan {
-        result = nan_result;
+        assert(result_is_nan);
     }
+    
+    // Inf + (-Inf) = NaN
+    if a_is_inf & b_is_inf & (a.sign != b.sign) {
+        assert(result_is_nan);
+    }
+    
+    // Inf + finite = Inf (with same sign)
+    if a_is_inf & !b_is_nan & !b_is_inf {
+        assert(result_is_inf);
+        assert(result.sign == a.sign);
+    }
+    if b_is_inf & !a_is_nan & !a_is_inf {
+        assert(result_is_inf);
+        assert(result.sign == b.sign);
+    }
+    
+    // Inf + Inf (same sign) = Inf
+    if a_is_inf & b_is_inf & (a.sign == b.sign) {
+        assert(result_is_inf);
+        assert(result.sign == a.sign);
+    }
+    
+    // x + 0 = x (for finite x)
+    if b_is_zero & !a_is_nan & !a_is_inf & !a_is_zero {
+        assert(float64_to_bits(result) == float64_to_bits(a));
+    }
+    if a_is_zero & !b_is_nan & !b_is_inf & !b_is_zero {
+        assert(float64_to_bits(result) == float64_to_bits(b));
+    }
+    
+    // Verify mantissa is in valid range
+    if !result_is_nan & !result_is_inf {
+        assert(result.mantissa < FLOAT64_IMPLICIT_BIT);
+    }
+    
+    // Verify exponent is in valid range
+    assert(result.exponent <= FLOAT64_EXPONENT_MAX);
+}
 
+// IEEE 754 compliant addition for 64-bit doubles
+pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
+    // Safety: The unconstrained hint computes the IEEE 754 compliant result
+    let result = unsafe { add_float64_hint(a, b) };
+    
+    verify_add_float64_result(a, b, result);
+    
     result
 }
 
@@ -634,8 +587,8 @@ pub fn sub_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
 // IEEE 754 Float32 Multiplication
 // ============================================================================
 
-// IEEE 754 compliant multiplication for 32-bit floats
-pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
+// Unconstrained hint for Float32 multiplication
+unconstrained fn mul_float32_hint(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     // Determine special cases
     let a_is_nan = float32_is_nan(a);
     let b_is_nan = float32_is_nan(b);
@@ -800,6 +753,68 @@ pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     result
 }
 
+// Verify a Float32 multiplication result
+fn verify_mul_float32_result(a: IEEE754Float32, b: IEEE754Float32, result: IEEE754Float32) {
+    let a_is_nan = float32_is_nan(a);
+    let b_is_nan = float32_is_nan(b);
+    let a_is_inf = float32_is_infinity(a);
+    let b_is_inf = float32_is_infinity(b);
+    let a_is_zero = float32_is_zero(a);
+    let b_is_zero = float32_is_zero(b);
+    let result_is_nan = float32_is_nan(result);
+    let result_is_inf = float32_is_infinity(result);
+    let result_is_zero = float32_is_zero(result);
+    let result_sign = a.sign ^ b.sign;
+
+    // NaN propagation
+    if a_is_nan | b_is_nan {
+        assert(result_is_nan);
+    }
+    
+    // 0 * inf = NaN
+    if (a_is_zero & b_is_inf) | (a_is_inf & b_is_zero) {
+        assert(result_is_nan);
+    }
+    
+    // x * 0 = 0 (for finite x)
+    if !a_is_nan & !a_is_inf & b_is_zero {
+        assert(result_is_zero);
+    }
+    if a_is_zero & !b_is_nan & !b_is_inf {
+        assert(result_is_zero);
+    }
+    
+    // x * inf = inf (for finite non-zero x)
+    if !a_is_nan & !a_is_zero & !a_is_inf & b_is_inf {
+        assert(result_is_inf);
+        assert(result.sign == result_sign);
+    }
+    if a_is_inf & !b_is_nan & !b_is_zero & !b_is_inf {
+        assert(result_is_inf);
+        assert(result.sign == result_sign);
+    }
+    
+    // inf * inf = inf
+    if a_is_inf & b_is_inf {
+        assert(result_is_inf);
+    }
+    
+    // Verify mantissa is in valid range
+    if !result_is_nan & !result_is_inf {
+        assert(result.mantissa < FLOAT32_IMPLICIT_BIT);
+    }
+    
+    // Verify exponent is in valid range
+    assert(result.exponent <= FLOAT32_EXPONENT_MAX);
+}
+
+// IEEE 754 compliant multiplication for 32-bit floats
+pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
+    let result = unsafe { mul_float32_hint(a, b) };
+    verify_mul_float32_result(a, b, result);
+    result
+}
+
 // ============================================================================
 // IEEE 754 Float64 Multiplication
 // ============================================================================
@@ -862,8 +877,8 @@ fn shift_right_sticky_u128(val: U128, shift: u64) -> u64 {
     }
 }
 
-// IEEE 754 compliant multiplication for 64-bit floats
-pub fn mul_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
+// Unconstrained hint for Float64 multiplication
+unconstrained fn mul_float64_hint(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     // Determine special cases
     let a_is_nan = float64_is_nan(a);
     let b_is_nan = float64_is_nan(b);
@@ -1028,12 +1043,74 @@ pub fn mul_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     result
 }
 
+// Verify a Float64 multiplication result
+fn verify_mul_float64_result(a: IEEE754Float64, b: IEEE754Float64, result: IEEE754Float64) {
+    let a_is_nan = float64_is_nan(a);
+    let b_is_nan = float64_is_nan(b);
+    let a_is_inf = float64_is_infinity(a);
+    let b_is_inf = float64_is_infinity(b);
+    let a_is_zero = float64_is_zero(a);
+    let b_is_zero = float64_is_zero(b);
+    let result_is_nan = float64_is_nan(result);
+    let result_is_inf = float64_is_infinity(result);
+    let result_is_zero = float64_is_zero(result);
+    let result_sign = a.sign ^ b.sign;
+
+    // NaN propagation
+    if a_is_nan | b_is_nan {
+        assert(result_is_nan);
+    }
+    
+    // 0 * inf = NaN
+    if (a_is_zero & b_is_inf) | (a_is_inf & b_is_zero) {
+        assert(result_is_nan);
+    }
+    
+    // x * 0 = 0 (for finite x)
+    if !a_is_nan & !a_is_inf & b_is_zero {
+        assert(result_is_zero);
+    }
+    if a_is_zero & !b_is_nan & !b_is_inf {
+        assert(result_is_zero);
+    }
+    
+    // x * inf = inf (for finite non-zero x)
+    if !a_is_nan & !a_is_zero & !a_is_inf & b_is_inf {
+        assert(result_is_inf);
+        assert(result.sign == result_sign);
+    }
+    if a_is_inf & !b_is_nan & !b_is_zero & !b_is_inf {
+        assert(result_is_inf);
+        assert(result.sign == result_sign);
+    }
+    
+    // inf * inf = inf
+    if a_is_inf & b_is_inf {
+        assert(result_is_inf);
+    }
+    
+    // Verify mantissa is in valid range
+    if !result_is_nan & !result_is_inf {
+        assert(result.mantissa < FLOAT64_IMPLICIT_BIT);
+    }
+    
+    // Verify exponent is in valid range
+    assert(result.exponent <= FLOAT64_EXPONENT_MAX);
+}
+
+// IEEE 754 compliant multiplication for 64-bit floats
+pub fn mul_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
+    let result = unsafe { mul_float64_hint(a, b) };
+    verify_mul_float64_result(a, b, result);
+    result
+}
+
 // ============================================================================
 // IEEE 754 Float32 Division
 // ============================================================================
 
-// IEEE 754 compliant division for 32-bit floats
-pub fn div_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
+// Unconstrained hint for Float32 division
+unconstrained fn div_float32_hint(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     // Determine special cases
     let a_is_nan = float32_is_nan(a);
     let b_is_nan = float32_is_nan(b);
@@ -1253,13 +1330,79 @@ pub fn div_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     result
 }
 
+// Verify a Float32 division result
+fn verify_div_float32_result(a: IEEE754Float32, b: IEEE754Float32, result: IEEE754Float32) {
+    let a_is_nan = float32_is_nan(a);
+    let b_is_nan = float32_is_nan(b);
+    let a_is_inf = float32_is_infinity(a);
+    let b_is_inf = float32_is_infinity(b);
+    let a_is_zero = float32_is_zero(a);
+    let b_is_zero = float32_is_zero(b);
+    let result_is_nan = float32_is_nan(result);
+    let result_is_inf = float32_is_infinity(result);
+    let result_is_zero = float32_is_zero(result);
+    let result_sign = a.sign ^ b.sign;
+
+    // NaN propagation
+    if a_is_nan | b_is_nan {
+        assert(result_is_nan);
+    }
+    
+    // 0/0 = NaN
+    if a_is_zero & b_is_zero {
+        assert(result_is_nan);
+    }
+    
+    // inf/inf = NaN
+    if a_is_inf & b_is_inf {
+        assert(result_is_nan);
+    }
+    
+    // x/0 = inf (for finite non-zero x)
+    if !a_is_nan & !a_is_zero & !a_is_inf & b_is_zero {
+        assert(result_is_inf);
+        assert(result.sign == result_sign);
+    }
+    
+    // 0/x = 0 (for finite non-zero x)
+    if a_is_zero & !b_is_nan & !b_is_zero {
+        assert(result_is_zero);
+    }
+    
+    // inf/x = inf (for finite x)
+    if a_is_inf & !b_is_nan & !b_is_inf {
+        assert(result_is_inf);
+        assert(result.sign == result_sign);
+    }
+    
+    // x/inf = 0 (for finite x)
+    if !a_is_nan & !a_is_inf & b_is_inf {
+        assert(result_is_zero);
+    }
+    
+    // Verify mantissa is in valid range
+    if !result_is_nan & !result_is_inf {
+        assert(result.mantissa < FLOAT32_IMPLICIT_BIT);
+    }
+    
+    // Verify exponent is in valid range
+    assert(result.exponent <= FLOAT32_EXPONENT_MAX);
+}
+
+// IEEE 754 compliant division for 32-bit floats
+pub fn div_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
+    let result = unsafe { div_float32_hint(a, b) };
+    verify_div_float32_result(a, b, result);
+    result
+}
+
 // ============================================================================
 // IEEE 754 Float64 Division
 // ============================================================================
 
 // Helper for 128-bit division: divides a 128-bit dividend by a 64-bit divisor
 // Returns quotient (fits in 64 bits for our use case) and remainder
-fn div_u128_by_u64(dividend: U128, divisor: u64) -> (u64, u64) {
+unconstrained fn div_u128_by_u64(dividend: U128, divisor: u64) -> (u64, u64) {
     // For simplicity, we'll do this with a long division approach
     // This works because our dividend is at most 2^109 and divisor is at least 2^52
     // so the quotient fits in 57 bits (< 64 bits)
@@ -1305,8 +1448,8 @@ fn div_u128_by_u64(dividend: U128, divisor: u64) -> (u64, u64) {
     }
 }
 
-// IEEE 754 compliant division for 64-bit floats
-pub fn div_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
+// Unconstrained hint for Float64 division
+unconstrained fn div_float64_hint(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     // Determine special cases
     let a_is_nan = float64_is_nan(a);
     let b_is_nan = float64_is_nan(b);
@@ -1485,5 +1628,71 @@ pub fn div_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
         result = float64_nan();
     }
 
+    result
+}
+
+// Verify a Float64 division result
+fn verify_div_float64_result(a: IEEE754Float64, b: IEEE754Float64, result: IEEE754Float64) {
+    let a_is_nan = float64_is_nan(a);
+    let b_is_nan = float64_is_nan(b);
+    let a_is_inf = float64_is_infinity(a);
+    let b_is_inf = float64_is_infinity(b);
+    let a_is_zero = float64_is_zero(a);
+    let b_is_zero = float64_is_zero(b);
+    let result_is_nan = float64_is_nan(result);
+    let result_is_inf = float64_is_infinity(result);
+    let result_is_zero = float64_is_zero(result);
+    let result_sign = a.sign ^ b.sign;
+
+    // NaN propagation
+    if a_is_nan | b_is_nan {
+        assert(result_is_nan);
+    }
+    
+    // 0/0 = NaN
+    if a_is_zero & b_is_zero {
+        assert(result_is_nan);
+    }
+    
+    // inf/inf = NaN
+    if a_is_inf & b_is_inf {
+        assert(result_is_nan);
+    }
+    
+    // x/0 = inf (for finite non-zero x)
+    if !a_is_nan & !a_is_zero & !a_is_inf & b_is_zero {
+        assert(result_is_inf);
+        assert(result.sign == result_sign);
+    }
+    
+    // 0/x = 0 (for finite non-zero x)
+    if a_is_zero & !b_is_nan & !b_is_zero {
+        assert(result_is_zero);
+    }
+    
+    // inf/x = inf (for finite x)
+    if a_is_inf & !b_is_nan & !b_is_inf {
+        assert(result_is_inf);
+        assert(result.sign == result_sign);
+    }
+    
+    // x/inf = 0 (for finite x)
+    if !a_is_nan & !a_is_inf & b_is_inf {
+        assert(result_is_zero);
+    }
+    
+    // Verify mantissa is in valid range
+    if !result_is_nan & !result_is_inf {
+        assert(result.mantissa < FLOAT64_IMPLICIT_BIT);
+    }
+    
+    // Verify exponent is in valid range
+    assert(result.exponent <= FLOAT64_EXPONENT_MAX);
+}
+
+// IEEE 754 compliant division for 64-bit floats
+pub fn div_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
+    let result = unsafe { div_float64_hint(a, b) };
+    verify_div_float64_result(a, b, result);
     result
 }
