@@ -86,6 +86,7 @@ b32+ =0 +1.000000P+0 +1.000000P+0 -> +1.000000P+1
 | Subtraction (-) | ✅ `sub_float32` | ✅ `sub_float64` | `--operation sub` |
 | Multiplication (*) | ✅ `mul_float32` | ✅ `mul_float64` | `--operation mul` |
 | Division (/) | ✅ `div_float32` | ✅ `div_float64` | `--operation div` |
+| Square Root | ✅ `sqrt_float32` | ✅ `sqrt_float64` | - |
 | Equal (==) | ✅ `float32_eq` | ✅ `float64_eq` | - |
 | Not Equal (!=) | ✅ `float32_ne` | ✅ `float64_ne` | - |
 | Less Than (<) | ✅ `float32_lt` | ✅ `float64_lt` | - |
@@ -98,7 +99,7 @@ b32+ =0 +1.000000P+0 +1.000000P+0 -> +1.000000P+1
 ## Future Extensions
 
 1. **Rounding modes**: Add parameter for `>` (toward +∞), `<` (toward -∞), `0` (toward zero)
-2. **Square root**: `sqrt_float32`/`sqrt_float64`
+2. **FMA operation**: `fma_float32`/`fma_float64`
 
 ## Critical Files
 

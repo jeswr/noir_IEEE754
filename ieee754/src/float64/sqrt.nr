@@ -85,29 +85,31 @@ pub fn sqrt_float64(a: IEEE754Float64) -> IEEE754Float64 {
     let adjusted_mant: u64 = if exp_is_odd { mant_a << 1 } else { mant_a };
 
     // Square root algorithm scaling:
-    // - mant_a has implicit bit at position 52, representing value in [1, 2)
-    // - For result with 55 bits (52 mantissa + 3 guard), we need 110-bit input
-    // - result_mant / 2^55 = sqrt(adjusted_mant / 2^k) where k = 52 or 53
-    // - => result_mant = sqrt(adjusted_mant * 2^(110 - k))
-    // - For even exp: k=52, radicand = adjusted_mant << 58
-    // - For odd exp: k=53, radicand = adjusted_mant << 57
+    // - For result with implicit at position 55 (52 mantissa + 3 guard)
+    // - result / 2^55 = sqrt(adjusted_mant / 2^52) (with binary point after bit 52)
+    // - result = sqrt(adjusted_mant / 2^52) * 2^55 = sqrt(adjusted_mant) * 2^(55-26) = sqrt(adjusted_mant) * 2^29
+    // - result = sqrt(adjusted_mant * 2^58)
+    //
+    // This works for both even and odd exp (shift is 58 in both cases).
+    // For odd exp, adjusted_mant represents value in [2,4), sqrt in [sqrt(2), 2).
+    // For even exp, adjusted_mant represents value in [1,2), sqrt in [1, sqrt(2)).
 
-    let shift_amount: u64 = if exp_is_odd { 57 } else { 58 };
+    let radicand_shift: u64 = 58;
 
     // Create 128-bit radicand
-    let radicand_high: u64 = adjusted_mant >> (64 - shift_amount);
-    let radicand_low: u64 = adjusted_mant << shift_amount;
+    let radicand_high: u64 = adjusted_mant >> (64 - radicand_shift);
+    let radicand_low: u64 = adjusted_mant << radicand_shift;
 
-    // Digit-by-digit square root algorithm for 110-bit input
-    // Result will be ~55 bits
+    // Digit-by-digit square root algorithm (binary restoring method) for up to 112-bit input
+    // Computes floor(sqrt(radicand)) by processing 2 bits at a time
+    //
+    // We use 56 iterations to handle radicand up to 2^111
+
     let mut sqrt_result: u64 = 0;
     let mut remainder = U128 { high: 0, low: 0 };
-    let mut bit: u64 = 1 << 54; // Start from bit position 54
 
-    // Process 110 bits of input, 2 at a time (55 iterations)
-    let mut input_pos: i64 = 108; // Start at bits 108-109
-
-    for _i in 0..55 {
+    // Process up to 112 bits of input, 2 at a time (56 iterations)
+    for i in 0..56 {
         // Shift remainder left by 2
         remainder = U128 {
             high: (remainder.high << 2) | (remainder.low >> 62),
@@ -115,44 +117,42 @@ pub fn sqrt_float64(a: IEEE754Float64) -> IEEE754Float64 {
         };
 
         // Add next two bits from radicand
-        if input_pos >= 0 {
-            let two_bits = if input_pos >= 64 {
-                (radicand_high >> ((input_pos - 64) as u64)) & 3
+        // bit position: 110 - 2*i for the pair (starts at bits 110-111, ends at 0-1)
+        let shift_pos: i64 = 110 - 2 * (i as i64);
+        let two_bits: u64 = if shift_pos >= 64 {
+            (radicand_high >> ((shift_pos - 64) as u64)) & 3
+        } else if shift_pos >= 0 {
+            (radicand_low >> (shift_pos as u64)) & 3
+        } else {
+            0
+        };
+        remainder.low = remainder.low | two_bits;
+
+        // Candidate: (result << 2) | 1 = 4*result + 1
+        // This fits in 64 bits since result < 2^57
+        let cand: u64 = (sqrt_result << 2) | 1;
+
+        // Compare remainder >= cand
+        let remainder_ge_cand =
+            (remainder.high > 0) | ((remainder.high == 0) & (remainder.low >= cand));
+
+        if remainder_ge_cand {
+            // remainder = remainder - cand
+            if remainder.low >= cand {
+                remainder.low = remainder.low - cand;
             } else {
-                (radicand_low >> (input_pos as u64)) & 3
-            };
-            remainder.low = remainder.low | two_bits;
-        }
-        input_pos = input_pos - 2;
-
-        // trial = (2 * result + bit) = (result << 1) | bit
-        let trial: u64 = (sqrt_result << 1) | bit;
-
-        // Compare remainder >= trial (where trial fits in 64 bits but remainder is 128-bit)
-        let remainder_ge_trial =
-            (remainder.high > 0) | ((remainder.high == 0) & (remainder.low >= trial));
-
-        if remainder_ge_trial {
-            // remainder = remainder - trial (trial fits in 64 bits)
-            if remainder.low >= trial {
-                remainder.low = remainder.low - trial;
-            } else {
-                // Borrow from high
                 remainder.high = remainder.high - 1;
-                remainder.low = remainder.low + (0 - trial); // wrapping subtraction
+                remainder.low = remainder.low + (0 - cand); // wrapping subtraction
             }
-            sqrt_result = sqrt_result | bit;
+            sqrt_result = (sqrt_result << 1) | 1;
+        } else {
+            sqrt_result = sqrt_result << 1;
         }
-        bit = bit >> 1;
     }
 
-    // sqrt_result has ~55 bits with implicit bit at position 54
-    // We need implicit bit at position 52, so we have 2 extra bits for guard
-    // Actually let's be more precise: we want 3 guard bits
-
-    // Shift result to have implicit at position 55 (so we have 3 guard bits at 2,1,0)
-    // Current implicit is at 54, shift left by 1
-    let mut result_mant = sqrt_result << 1;
+    // sqrt_result has ~56 bits with implicit bit at position 55
+    // We need implicit bit at position 52, so we have 3 guard bits (positions 2,1,0)
+    let mut result_mant = sqrt_result;
 
     // Add sticky bit if remainder is non-zero
     if (remainder.high != 0) | (remainder.low != 0) {
@@ -167,7 +167,7 @@ pub fn sqrt_float64(a: IEEE754Float64) -> IEEE754Float64 {
 
     if result_exp <= 0 {
         let denorm_shift = 1 - result_exp;
-        if denorm_shift < 56 {
+        if denorm_shift < 57 {
             result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
         } else {
             result_mant = 0;
