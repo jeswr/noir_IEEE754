@@ -22,12 +22,22 @@ pub use crate::types::{
 pub use crate::float32::{
     add_float32, div_float32, float32_from_bits, float32_infinity, float32_is_denormal,
     float32_is_infinity, float32_is_nan, float32_is_zero, float32_nan, float32_to_bits,
-    float32_zero, mul_float32, sub_float32,
+    float32_zero, mul_float32, sub_float32, abs_float32,
+    // Comparison operations
+    float32_eq, float32_ne, float32_lt, float32_le, float32_gt, float32_ge, float32_unordered,
+    float32_compare,
+    // Square root
+    sqrt_float32,
 };
 
 // Re-export Float64 operations
 pub use crate::float64::{
     add_float64, div_float64, float64_from_bits, float64_infinity, float64_is_denormal,
     float64_is_infinity, float64_is_nan, float64_is_zero, float64_nan, float64_to_bits,
-    float64_zero, mul_float64, sub_float64,
+    float64_zero, mul_float64, sub_float64, abs_float64,
+    // Comparison operations
+    float64_eq, float64_ne, float64_lt, float64_le, float64_gt, float64_ge, float64_unordered,
+    float64_compare,
+    // Square root
+    sqrt_float64,
 };

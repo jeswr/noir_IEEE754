@@ -24,9 +24,78 @@ pub fn mul_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     // Result sign is XOR of input signs
     let result_sign: u1 = a.sign ^ b.sign;
 
-    // Get effective mantissas with implicit bit (53 bits each)
+    // Get mantissas and normalize denormals
+    // For denormals, we need to normalize them to have the implicit bit at position 52
+    // and adjust the exponent accordingly
+
+    // Count leading zeros for denormal normalization (52-bit mantissa field)
+    // Goal: find shift amount to put highest set bit at position 52 (implicit bit position)
+    let a_mant_raw: u64 = a.mantissa;
+    let mut a_lz: i64 = 0;
+    if a_is_denormal & (a_mant_raw != 0) {
+        let mut v = a_mant_raw;
+        // Binary search for leading zeros relative to bit 51
+        if (v & 0xFFFFFFF000000) == 0 {
+            a_lz = a_lz + 28;
+            v = v << 28;
+        } // bits 24-51
+        if (v & 0xFFFC000000000) == 0 {
+            a_lz = a_lz + 14;
+            v = v << 14;
+        } // bits 38-51
+        if (v & 0xFE00000000000) == 0 {
+            a_lz = a_lz + 7;
+            v = v << 7;
+        } // bits 45-51
+        if (v & 0xF000000000000) == 0 {
+            a_lz = a_lz + 4;
+            v = v << 4;
+        } // bits 48-51
+        if (v & 0xC000000000000) == 0 {
+            a_lz = a_lz + 2;
+            v = v << 2;
+        } // bits 50-51
+        if (v & 0x8000000000000) == 0 {
+            a_lz = a_lz + 1;
+        } // bit 51
+        // Add 1 to get shift to position 52
+        a_lz = a_lz + 1;
+    }
+
+    let b_mant_raw: u64 = b.mantissa;
+    let mut b_lz: i64 = 0;
+    if b_is_denormal & (b_mant_raw != 0) {
+        let mut v = b_mant_raw;
+        if (v & 0xFFFFFFF000000) == 0 {
+            b_lz = b_lz + 28;
+            v = v << 28;
+        }
+        if (v & 0xFFFC000000000) == 0 {
+            b_lz = b_lz + 14;
+            v = v << 14;
+        }
+        if (v & 0xFE00000000000) == 0 {
+            b_lz = b_lz + 7;
+            v = v << 7;
+        }
+        if (v & 0xF000000000000) == 0 {
+            b_lz = b_lz + 4;
+            v = v << 4;
+        }
+        if (v & 0xC000000000000) == 0 {
+            b_lz = b_lz + 2;
+            v = v << 2;
+        }
+        if (v & 0x8000000000000) == 0 {
+            b_lz = b_lz + 1;
+        }
+        b_lz = b_lz + 1;
+    }
+
+    // Get effective mantissas with implicit bit (53 bits)
+    // For denormals, shift to normalize (put highest bit at position 52)
     let mant_a: u64 = if a_is_denormal {
-        a.mantissa
+        a_mant_raw << (a_lz as u64)
     } else if a_is_zero {
         0
     } else {
@@ -34,16 +103,16 @@ pub fn mul_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     };
 
     let mant_b: u64 = if b_is_denormal {
-        b.mantissa
+        b_mant_raw << (b_lz as u64)
     } else if b_is_zero {
         0
     } else {
         b.mantissa | FLOAT64_IMPLICIT_BIT
     };
 
-    // Get effective exponents (unbiased)
+    // Get effective exponents (unbiased), accounting for denormal normalization
     let exp_a_eff: i64 = if a_is_denormal {
-        1 - 1023
+        1 - 1023 - a_lz
     } else if a_is_zero {
         0
     } else {
@@ -51,7 +120,7 @@ pub fn mul_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     };
 
     let exp_b_eff: i64 = if b_is_denormal {
-        1 - 1023
+        1 - 1023 - b_lz
     } else if b_is_zero {
         0
     } else {
@@ -218,30 +287,39 @@ pub fn mul_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
         }
     }
 
-    // Round to nearest, ties to even
-    let guard_bits = result_mant & 0x7;
-    result_mant = result_mant >> 3;
-
-    let should_round_up = (guard_bits > 4) | ((guard_bits == 4) & ((result_mant & 1) == 1));
-    if should_round_up {
-        result_mant = result_mant + 1;
-        if result_mant >= (FLOAT64_IMPLICIT_BIT << 1) {
-            result_mant = result_mant >> 1;
-            result_exp = result_exp + 1;
-        }
-    }
-
-    // Handle underflow to denormal
+    // Handle underflow to denormal BEFORE rounding
+    // The mantissa currently has implicit bit at position 55 (52 mantissa + 3 guard)
     let mut is_denormal_result = false;
     if result_exp <= 0 {
         let denorm_shift = 1 - result_exp;
-        if denorm_shift < 53 {
+        if denorm_shift < 56 {
             result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
         } else {
             result_mant = 0;
         }
         result_exp = 0;
         is_denormal_result = true;
+    }
+
+    // Round to nearest, ties to even
+    // Guard bits are in positions 0-2 (guard at bit 2, round at bit 1, sticky at bit 0)
+    let guard_bits = result_mant & 0x7;
+    result_mant = result_mant >> 3;
+
+    let should_round_up = (guard_bits > 4) | ((guard_bits == 4) & ((result_mant & 1) == 1));
+    if should_round_up {
+        result_mant = result_mant + 1;
+        // Check for overflow from rounding
+        if !is_denormal_result & (result_mant >= (FLOAT64_IMPLICIT_BIT << 1)) {
+            result_mant = result_mant >> 1;
+            result_exp = result_exp + 1;
+        }
+        // For denormals, if rounding causes overflow into normal range, adjust
+        if is_denormal_result & (result_mant >= FLOAT64_IMPLICIT_BIT) {
+            // Becomes a normal number with exponent 1
+            result_exp = 1;
+            is_denormal_result = false;
+        }
     }
 
     // Check for overflow to infinity

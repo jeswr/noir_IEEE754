@@ -23,7 +23,7 @@ jobs:
           python-version: '3.12'
 
       - name: Generate IEEE 754 tests and CI matrix
-        run: python3 scripts/generate_tests.py --all --packages --output-dir test_packages --ci-matrix .github/test-matrix.json
+        run: python3 scripts/generate_tests.py --all --packages --synthetic-f64 --generate-f64 --output-dir test_packages --ci-matrix .github/test-matrix.json
 
       - name: Read test matrix
         id: matrix

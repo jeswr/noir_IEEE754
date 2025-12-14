@@ -6,6 +6,8 @@ pub(crate) mod helpers;
 pub(crate) mod add;
 pub(crate) mod mul;
 pub(crate) mod div;
+pub(crate) mod cmp;
+pub(crate) mod sqrt;
 
 // Re-export all public functions
 pub use helpers::{
@@ -14,8 +16,13 @@ pub use helpers::{
 };
 
 pub use add::add_float32;
+pub use cmp::{
+    float32_compare, float32_eq, float32_ge, float32_gt, float32_le, float32_lt, float32_ne,
+    float32_unordered,
+};
 pub use div::div_float32;
 pub use mul::mul_float32;
+pub use sqrt::sqrt_float32;
 
 // Subtraction is implemented as a + (-b)
 use crate::types::IEEE754Float32;
@@ -26,4 +33,11 @@ pub fn sub_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     // Negate b's sign and add
     let neg_b = IEEE754Float32 { sign: 1 - b.sign, exponent: b.exponent, mantissa: b.mantissa };
     add_float32(a, neg_b)
+}
+
+// IEEE 754 compliant absolute value for 32-bit floats
+// Returns the magnitude of the float (sign bit set to 0)
+// Note: abs(NaN) returns NaN (with sign bit cleared)
+pub fn abs_float32(a: IEEE754Float32) -> IEEE754Float32 {
+    IEEE754Float32 { sign: 0, exponent: a.exponent, mantissa: a.mantissa }
 }
