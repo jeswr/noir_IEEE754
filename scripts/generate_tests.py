@@ -363,8 +363,15 @@ def generate_noir_test_name(test: TestCase, index: int) -> str:
     return f"test_{precision}_{op}_{index}"
 
 
-def generate_noir_test(test: TestCase, index: int, add_debug: bool = False) -> Optional[str]:
-    """Generate Noir test code for a single test case."""
+def generate_noir_test(test: TestCase, index: int, add_debug: bool = False, force_f64: bool = False) -> Optional[str]:
+    """Generate Noir test code for a single test case.
+    
+    Args:
+        test: The test case to generate code for
+        index: Test index for naming
+        add_debug: Whether to add println statements
+        force_f64: If True, convert f32 test cases to f64 (using f64 arithmetic)
+    """
     
     # Support add, subtract, multiply, and divide
     if test.operation not in (Operation.ADD, Operation.SUBTRACT, Operation.MULTIPLY, Operation.DIVIDE):
@@ -378,19 +385,32 @@ def generate_noir_test(test: TestCase, index: int, add_debug: bool = False) -> O
     if test.operand2 is None:
         return None
     
-    is_float32 = test.precision == Precision.BINARY32
+    # Determine if we're generating f32 or f64 test
+    # If force_f64 is True and the test is f32, convert to f64
+    original_is_f32 = test.precision == Precision.BINARY32
+    is_float32 = original_is_f32 and not force_f64
+    
     prec = "32" if is_float32 else "64"
     sign_bit = 0x80000000 if is_float32 else 0x8000000000000000
     hex_width = 8 if is_float32 else 16
     
     # Convert operands to bits
-    to_bits = fp_value_to_bits32 if is_float32 else fp_value_to_bits64
-    from_bits = float32_from_bits if is_float32 else float64_from_bits
-    bits1 = to_bits(test.operand1)
-    bits2 = to_bits(test.operand2)
-    
-    # Compute expected result using Python's IEEE 754 hardware
-    f1, f2 = from_bits(bits1), from_bits(bits2)
+    # For force_f64 mode, first convert to f32, then to f64 value, then to f64 bits
+    if force_f64 and original_is_f32:
+        # Get the float32 values first
+        bits1_f32 = fp_value_to_bits32(test.operand1)
+        bits2_f32 = fp_value_to_bits32(test.operand2)
+        f1 = float32_from_bits(bits1_f32)
+        f2 = float32_from_bits(bits2_f32)
+        # Convert to f64 bits (Python floats are f64, so this is straightforward)
+        bits1 = float64_to_bits(f1)
+        bits2 = float64_to_bits(f2)
+    else:
+        to_bits = fp_value_to_bits32 if is_float32 else fp_value_to_bits64
+        from_bits = float32_from_bits if is_float32 else float64_from_bits
+        bits1 = to_bits(test.operand1)
+        bits2 = to_bits(test.operand2)
+        f1, f2 = from_bits(bits1), from_bits(bits2)
     
     # Compute result based on operation
     if test.operation == Operation.ADD:
@@ -422,8 +442,11 @@ def generate_noir_test(test: TestCase, index: int, add_debug: bool = False) -> O
     }
     op_func = op_func_map[test.operation]
     
-    # Format values
-    test_name = generate_noir_test_name(test, index)
+    # Format values - use modified test name for f64-converted tests
+    if force_f64 and original_is_f32:
+        test_name = f"test_f64_{op_func_map[test.operation]}_{index}"
+    else:
+        test_name = generate_noir_test_name(test, index)
     bits1_str = f"0x{bits1:0{hex_width}X}"
     bits2_str = f"0x{bits2:0{hex_width}X}"
     expected_str = f"0x{expected:0{hex_width}X}"
@@ -493,11 +516,11 @@ use crate::float::{{{imports_str}}};
 """
 
 
-def generate_noir_file(tests: list[TestCase], output_path: str, source_files: list[str], add_debug: bool = False):
+def generate_noir_file(tests: list[TestCase], output_path: str, source_files: list[str], add_debug: bool = False, force_f64: bool = False):
     """Generate a complete Noir test file from test cases."""
     test_code = [
         code for i, test in enumerate(tests)
-        if (code := generate_noir_test(test, i, add_debug))
+        if (code := generate_noir_test(test, i, add_debug, force_f64))
     ]
     
     analysis = analyze_test_code(test_code)
@@ -521,7 +544,9 @@ def generate_ci_matrix(
     tests_by_file: dict[str, list[TestCase]], 
     output_path: str,
     chunk_size: int = 25,
-    max_chunks_per_group: int = 50
+    max_chunks_per_group: int = 50,
+    force_f64: bool = False,
+    generate_both: bool = False
 ) -> list[dict]:
     """Generate a CI matrix JSON file for GitHub Actions.
     
@@ -544,7 +569,12 @@ def generate_ci_matrix(
         module_name = _source_to_module_name(source_file)
         
         # Count how many test functions will be generated
-        test_count = sum(1 for i, test in enumerate(tests) if generate_noir_test(test, i) is not None)
+        if generate_both:
+            f32_count = sum(1 for i, test in enumerate(tests) if generate_noir_test(test, i, force_f64=False) is not None)
+            f64_count = sum(1 for i, test in enumerate(tests) if generate_noir_test(test, i, force_f64=True) is not None)
+            test_count = f32_count + f64_count
+        else:
+            test_count = sum(1 for i, test in enumerate(tests) if generate_noir_test(test, i, force_f64=force_f64) is not None)
         
         if test_count == 0:
             continue
@@ -582,9 +612,20 @@ def generate_noir_file_per_source(
     tests_by_file: dict[str, list[TestCase]], 
     output_dir: str, 
     add_debug: bool = False,
-    chunk_size: int = 25
+    chunk_size: int = 25,
+    force_f64: bool = False,
+    generate_both: bool = False
 ) -> dict[str, int]:
-    """Generate separate Noir test files for each source file, chunked into groups."""
+    """Generate separate Noir test files for each source file, chunked into groups.
+    
+    Args:
+        tests_by_file: Dict mapping source filenames to test cases
+        output_dir: Output directory for generated files
+        add_debug: Add println statements for debugging
+        chunk_size: Number of tests per chunk file
+        force_f64: If True, convert f32 tests to f64 only
+        generate_both: If True, generate both f32 and f64 tests (overrides force_f64)
+    """
     results = {}
     module_names = []
     
@@ -592,10 +633,22 @@ def generate_noir_file_per_source(
         module_name = _source_to_module_name(source_file)
         
         # Generate all test code
-        all_test_code = [
-            code for i, test in enumerate(tests)
-            if (code := generate_noir_test(test, i, add_debug))
-        ]
+        if generate_both:
+            # Generate both f32 tests (index 0..n-1) and f64 tests (index n..2n-1)
+            f32_tests = [
+                code for i, test in enumerate(tests)
+                if (code := generate_noir_test(test, i, add_debug, force_f64=False))
+            ]
+            f64_tests = [
+                code for i, test in enumerate(tests)
+                if (code := generate_noir_test(test, len(tests) + i, add_debug, force_f64=True))
+            ]
+            all_test_code = f32_tests + f64_tests
+        else:
+            all_test_code = [
+                code for i, test in enumerate(tests)
+                if (code := generate_noir_test(test, i, add_debug, force_f64))
+            ]
         
         if not all_test_code:
             continue
@@ -749,6 +802,11 @@ Examples:
         help='Filter by precision (default: all)'
     )
     parser.add_argument(
+        '--generate-f64',
+        action='store_true',
+        help='Generate f64 tests from f32 test cases (converts operands to f64 and computes results)'
+    )
+    parser.add_argument(
         '--max-tests',
         type=int,
         default=None,
@@ -882,7 +940,9 @@ Examples:
             tests_by_file, 
             output_dir, 
             add_debug=args.debug,
-            chunk_size=args.chunk_size
+            chunk_size=args.chunk_size,
+            force_f64=args.generate_f64,
+            generate_both=args.generate_f64  # When --generate-f64 is set, generate both
         )
         
         total_generated = sum(results.values())
@@ -890,7 +950,7 @@ Examples:
         
         # Generate CI matrix if requested
         if args.ci_matrix:
-            generate_ci_matrix(tests_by_file, args.ci_matrix, chunk_size=args.chunk_size)
+            generate_ci_matrix(tests_by_file, args.ci_matrix, chunk_size=args.chunk_size, force_f64=args.generate_f64, generate_both=args.generate_f64)
         
     else:
         # Parse all test files into one list
@@ -910,7 +970,8 @@ Examples:
             all_tests,
             args.output,
             [os.path.basename(f) for f in fptest_files],
-            add_debug=args.debug
+            add_debug=args.debug,
+            force_f64=args.generate_f64
         )
 
 
