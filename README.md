@@ -50,6 +50,63 @@ ieee754 = { git = "https://github.com/jeswr/noir_IEEE754", tag = "v0.1.0", direc
 
 ## Usage
 
+### Converting Decimal Values to Bit Representations
+
+The library uses IEEE 754 bit representations. To convert decimal values to the hex format needed by `float32_from_bits` / `float64_from_bits`:
+
+**Python:**
+```python
+import struct
+
+# Float32 (single precision)
+def float32_to_hex(f):
+    return hex(struct.unpack('>I', struct.pack('>f', f))[0])
+
+# Float64 (double precision)  
+def float64_to_hex(f):
+    return hex(struct.unpack('>Q', struct.pack('>d', f))[0])
+
+print(float32_to_hex(3.0))   # 0x40400000
+print(float32_to_hex(2.0))   # 0x40000000
+print(float64_to_hex(3.14))  # 0x40091eb851eb851f
+```
+
+**JavaScript:**
+```javascript
+// Float32
+function float32ToHex(f) {
+    const buf = new ArrayBuffer(4);
+    new Float32Array(buf)[0] = f;
+    return '0x' + new Uint32Array(buf)[0].toString(16).padStart(8, '0');
+}
+
+// Float64
+function float64ToHex(f) {
+    const buf = new ArrayBuffer(8);
+    new Float64Array(buf)[0] = f;
+    const view = new DataView(buf);
+    const high = view.getUint32(0, true);
+    const low = view.getUint32(4, true);
+    return '0x' + (BigInt(low) << 32n | BigInt(high)).toString(16).padStart(16, '0');
+}
+```
+
+**Common Float32 Values:**
+| Decimal | Hex | Description |
+|---------|-----|-------------|
+| 0.0 | `0x00000000` | Positive zero |
+| -0.0 | `0x80000000` | Negative zero |
+| 1.0 | `0x3F800000` | One |
+| 2.0 | `0x40000000` | Two |
+| 3.0 | `0x40400000` | Three |
+| 0.5 | `0x3F000000` | Half |
+| -1.0 | `0xBF800000` | Negative one |
+| +∞ | `0x7F800000` | Positive infinity |
+| -∞ | `0xFF800000` | Negative infinity |
+| NaN | `0x7FC00000` | Quiet NaN |
+
+### Basic Usage
+
 ```noir
 use ieee754::float::{
     IEEE754Float32, IEEE754Float64,
@@ -66,7 +123,7 @@ use ieee754::float::{
 };
 
 fn main() {
-    // Create floats from bit representation
+    // Create floats from bit representation (use conversion methods above)
     let a = float32_from_bits(0x40400000); // 3.0f
     let b = float32_from_bits(0x40000000); // 2.0f
     
