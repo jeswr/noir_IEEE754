@@ -42,13 +42,13 @@ Add to your `Nargo.toml`:
 
 ```toml
 [dependencies]
-noir_IEEE754 = { git = "https://github.com/jeswr/noir_IEEE754", tag = "v0.1.0" }
+ieee754 = { git = "https://github.com/jeswr/noir_IEEE754", tag = "v0.1.0", directory = "ieee754" }
 ```
 
 ## Usage
 
 ```noir
-use noir_IEEE754::float::{
+use ieee754::float::{
     IEEE754Float32, IEEE754Float64,
     float32_from_bits, float32_to_bits,
     float64_from_bits, float64_to_bits,
