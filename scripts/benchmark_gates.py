@@ -120,12 +120,12 @@ type = "bin"
 authors = ["benchmark"]
 
 [dependencies]
-noir_IEEE754 = {{ path = "{get_project_root()}" }}
+ieee754 = {{ path = "{get_project_root() / 'ieee754'}" }}
 """
     (project_dir / "Nargo.toml").write_text(nargo_toml)
 
     # Create main.nr
-    main_nr = f"""use noir_IEEE754::{{
+    main_nr = f"""use ieee754::{{
     float32_from_bits, float32_to_bits,
     float64_from_bits, float64_to_bits,
     add_float32, sub_float32, mul_float32, div_float32,
