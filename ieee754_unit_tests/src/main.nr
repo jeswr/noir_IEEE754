@@ -3,6 +3,5 @@
 
 mod float32_tests;
 mod float64_tests;
-mod debug_div;
 
 fn main() {}
