@@ -31,7 +31,7 @@ This library provides IEEE 754 standard floating-point operations in Noir, enabl
 ### Current Operations
 
 | Operation | Float32 | Float64 |
-|-----------|---------|---------||
+|-----------|---------|---------|
 | Addition  | ✅       | ✅       |
 | Subtraction | ✅     | ✅      |
 | Multiplication | ✅  | ✅      |
