@@ -2,6 +2,19 @@
 
 IEEE 754 compliant floating-point arithmetic library for [Noir](https://noir-lang.org/), a domain-specific language for zero-knowledge proofs.
 
+> [!CAUTION]
+> **Security Warning**: This library has **not been security reviewed** and should not be used in production systems without a thorough audit.
+
+> [!WARNING]
+> **AI-Generated Code**: This library is **largely AI-generated**. While it has been tested against the IBM FPgen test suite, there may be edge cases or subtle bugs that have not been discovered.
+
+> [!NOTE]
+> **Test Coverage Limitations**: The following IEEE 754 test cases are skipped:
+> - **Non-default rounding modes**: Only "round to nearest, ties to even" (`=0`) is supported. Tests using round toward +∞ (`>`), -∞ (`<`), zero (`0`), or nearest away (`=^`) are skipped.
+> - **Non-binary operations**: FMA (`*+`), square root (`V`), and remainder (`%`) operations are not implemented.
+> - **Known bad tests in IBM FPgen suite**: The test `b32/ =0 +1.2CEE1BP-64 +1.50EFBDP-30` from `Divide-Divide-By-Zero-Exception.fptest` is skipped due to an incorrect expected result in the test suite.
+> - **Underflow edge cases**: Tests where operands underflow to zero during conversion are skipped.
+
 ## Overview
 
 This library provides IEEE 754 standard floating-point operations in Noir, enabling verified floating-point computations in zero-knowledge circuits. The implementation supports both single-precision (binary32/float) and double-precision (binary64/double) formats.
