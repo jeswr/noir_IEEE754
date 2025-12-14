@@ -77,12 +77,53 @@ pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     let mut result_exp: i64 = exp_a_eff + exp_b_eff + 127;
     let mut result_mant: u64 = product;
 
-    // Check if we need to normalize (bit 47 set means >= 2.0)
+    // Normalize the product: find leading bit and adjust
+    // For normalized * normalized, leading bit is at 46 or 47
+    // For denormal * normal, it can be lower
+    // We need the leading bit at position 46 before the guard shift
+
+    // Check if bit 47 is set (overflow case)
     let bit_47_set = (product >> 47) & 1 == 1;
     if bit_47_set {
         result_exp = result_exp + 1;
         // Shift right by 1, keeping sticky bit
         result_mant = shift_right_sticky_u64(product, 1);
+    }
+
+    // Now normalize if the leading bit is below position 46
+    // Use binary search to count leading zeros
+    if (result_mant != 0) & ((result_mant >> 46) == 0) {
+        let target_bit: u64 = 46;
+        let mut leading_zeros: u64 = 0;
+        let mut v = result_mant;
+        if v & 0xFFFFFFFF00000000 == 0 {
+            leading_zeros += 32;
+            v <<= 32;
+        }
+        if v & 0xFFFF000000000000 == 0 {
+            leading_zeros += 16;
+            v <<= 16;
+        }
+        if v & 0xFF00000000000000 == 0 {
+            leading_zeros += 8;
+            v <<= 8;
+        }
+        if v & 0xF000000000000000 == 0 {
+            leading_zeros += 4;
+            v <<= 4;
+        }
+        if v & 0xC000000000000000 == 0 {
+            leading_zeros += 2;
+            v <<= 2;
+        }
+        if v & 0x8000000000000000 == 0 {
+            leading_zeros += 1;
+        }
+
+        // shift_needed = leading_zeros - (64 - target_bit - 1) = leading_zeros - 17
+        let shift_needed = leading_zeros - (64 - target_bit - 1);
+        result_mant = result_mant << shift_needed;
+        result_exp = result_exp - (shift_needed as i64);
     }
 
     // Now the implicit bit should be at position 46

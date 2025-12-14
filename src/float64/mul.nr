@@ -87,10 +87,134 @@ pub fn mul_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
             // That's a shift of 105 - 55 = 50
             result_mant = shift_right_sticky_u128(product, 50);
         } else {
-            // Product in [1, 2), implicit bit at position 104
-            // Shift from position 104 to position 55
-            // That's a shift of 104 - 55 = 49
-            result_mant = shift_right_sticky_u128(product, 49);
+            // Product in [1, 2) for normalized, or lower for denormal inputs
+            // First check if leading bit is at position 104
+            let bit_104_set = (product.high >> 40) & 1 == 1;
+
+            if bit_104_set {
+                // Normal case: implicit bit at position 104
+                // Shift from position 104 to position 55
+                // That's a shift of 104 - 55 = 49
+                result_mant = shift_right_sticky_u128(product, 49);
+            } else {
+                // Denormal case: leading bit is below position 104
+                // Need to find leading bit and normalize
+                // First, shift to get the value into a u64 for easier manipulation
+                // We know the leading bit is below 104, so it's in bits 0-103 of the 128-bit value
+
+                // Find leading bit position using binary search
+                let mut leading_pos: i64 = 0;
+                let mut found = false;
+
+                // Check high part first (bits 64-127 of product)
+                if product.high != 0 {
+                    let mut pos: i64 = 63;
+                    let mut v = product.high;
+                    if v & 0xFFFFFFFF00000000 != 0 {
+                        pos = pos;
+                    } else {
+                        pos = pos - 32;
+                        v <<= 32;
+                    }
+                    if v & 0xFFFF000000000000 != 0 {
+                        pos = pos;
+                    } else {
+                        pos = pos - 16;
+                        v <<= 16;
+                    }
+                    if v & 0xFF00000000000000 != 0 {
+                        pos = pos;
+                    } else {
+                        pos = pos - 8;
+                        v <<= 8;
+                    }
+                    if v & 0xF000000000000000 != 0 {
+                        pos = pos;
+                    } else {
+                        pos = pos - 4;
+                        v <<= 4;
+                    }
+                    if v & 0xC000000000000000 != 0 {
+                        pos = pos;
+                    } else {
+                        pos = pos - 2;
+                        v <<= 2;
+                    }
+                    if v & 0x8000000000000000 != 0 {
+                        pos = pos;
+                    } else {
+                        pos = pos - 1;
+                    }
+                    leading_pos = pos + 64; // Position in 128-bit value
+                    found = true;
+                }
+
+                if !found & (product.low != 0) {
+                    let mut pos: i64 = 63;
+                    let mut v = product.low;
+                    if v & 0xFFFFFFFF00000000 != 0 {
+                        pos = pos;
+                    } else {
+                        pos = pos - 32;
+                        v <<= 32;
+                    }
+                    if v & 0xFFFF000000000000 != 0 {
+                        pos = pos;
+                    } else {
+                        pos = pos - 16;
+                        v <<= 16;
+                    }
+                    if v & 0xFF00000000000000 != 0 {
+                        pos = pos;
+                    } else {
+                        pos = pos - 8;
+                        v <<= 8;
+                    }
+                    if v & 0xF000000000000000 != 0 {
+                        pos = pos;
+                    } else {
+                        pos = pos - 4;
+                        v <<= 4;
+                    }
+                    if v & 0xC000000000000000 != 0 {
+                        pos = pos;
+                    } else {
+                        pos = pos - 2;
+                        v <<= 2;
+                    }
+                    if v & 0x8000000000000000 != 0 {
+                        pos = pos;
+                    } else {
+                        pos = pos - 1;
+                    }
+                    leading_pos = pos; // Position in 128-bit value (low part)
+                    found = true;
+                }
+
+                // Adjust exponent based on how far below 104 the leading bit is
+                let exp_adjust = 104 - leading_pos;
+                result_exp = result_exp - exp_adjust;
+
+                // Shift to position 55 (target position with guard bits)
+                // If leading bit is at leading_pos, we want it at position 55
+                // So we shift by (leading_pos - 55) if leading_pos > 55, otherwise we'd need to shift left
+                let target_pos: i64 = 55;
+                if leading_pos >= target_pos {
+                    let shift_amount = (leading_pos - target_pos) as u64;
+                    result_mant = shift_right_sticky_u128(product, shift_amount);
+                } else {
+                    // Need to shift left - this means the product is very small
+                    // Shift from 128-bit to get all significant bits into result_mant
+                    // then shift left
+                    let shift_left = (target_pos - leading_pos) as u64;
+                    // Get bits from low part and shift left
+                    result_mant = product.low << shift_left;
+                    // Add bits from high if any overflow into the range
+                    if (product.high != 0) & (shift_left < 64) {
+                        result_mant = result_mant | (product.high << (shift_left + 64));
+                    }
+                }
+            }
         }
     }
 
