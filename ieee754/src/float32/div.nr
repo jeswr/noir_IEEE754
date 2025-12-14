@@ -24,9 +24,43 @@ pub fn div_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     // Result sign is XOR of input signs
     let result_sign: u1 = a.sign ^ b.sign;
 
+    // Get mantissas and normalize denormals
+    // For denormals, we need to normalize them to have the implicit bit at position 23
+    // and adjust the exponent accordingly
+    
+    // Count leading zeros for denormal normalization (23-bit mantissa field)
+    // Goal: find shift amount to put highest set bit at position 23 (implicit bit position)
+    // This equals (23 - highest_bit_position) = leading_zeros_from_bit22 + 1
+    let a_mant_raw: u64 = a.mantissa as u64;
+    let mut a_lz: i64 = 0;
+    if a_is_denormal & (a_mant_raw != 0) {
+        let mut v = a_mant_raw;
+        // Binary search for leading zeros relative to bit 22
+        if (v & 0x7FF800) == 0 { a_lz = a_lz + 12; v = v << 12; }  // bits 11-22
+        if (v & 0x7E0000) == 0 { a_lz = a_lz + 6; v = v << 6; }    // bits 17-22
+        if (v & 0x700000) == 0 { a_lz = a_lz + 3; v = v << 3; }    // bits 20-22
+        if (v & 0x600000) == 0 { a_lz = a_lz + 2; v = v << 2; }    // bits 21-22
+        if (v & 0x400000) == 0 { a_lz = a_lz + 1; }                 // bit 22
+        // Add 1 to get shift to position 23
+        a_lz = a_lz + 1;
+    }
+    
+    let b_mant_raw: u64 = b.mantissa as u64;
+    let mut b_lz: i64 = 0;
+    if b_is_denormal & (b_mant_raw != 0) {
+        let mut v = b_mant_raw;
+        if (v & 0x7FF800) == 0 { b_lz = b_lz + 12; v = v << 12; }
+        if (v & 0x7E0000) == 0 { b_lz = b_lz + 6; v = v << 6; }
+        if (v & 0x700000) == 0 { b_lz = b_lz + 3; v = v << 3; }
+        if (v & 0x600000) == 0 { b_lz = b_lz + 2; v = v << 2; }
+        if (v & 0x400000) == 0 { b_lz = b_lz + 1; }
+        b_lz = b_lz + 1;
+    }
+
     // Get effective mantissas with implicit bit (24 bits)
+    // For denormals, shift to normalize (put highest bit at position 23)
     let mant_a: u64 = if a_is_denormal {
-        a.mantissa as u64
+        a_mant_raw << (a_lz as u64)
     } else if a_is_zero {
         0
     } else {
@@ -34,16 +68,17 @@ pub fn div_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     };
 
     let mant_b: u64 = if b_is_denormal {
-        b.mantissa as u64
+        b_mant_raw << (b_lz as u64)
     } else if b_is_zero {
         0
     } else {
         (b.mantissa | FLOAT32_IMPLICIT_BIT) as u64
     };
 
-    // Get effective exponents (unbiased)
+    // Get effective exponents (unbiased), accounting for denormal normalization
+    // For denormal: base exp is -126, but we shifted by lz bits, so subtract lz
     let exp_a_eff: i64 = if a_is_denormal {
-        1 - 127
+        1 - 127 - a_lz
     } else if a_is_zero {
         0
     } else {
@@ -51,7 +86,7 @@ pub fn div_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     };
 
     let exp_b_eff: i64 = if b_is_denormal {
-        1 - 127
+        1 - 127 - b_lz
     } else if b_is_zero {
         0
     } else {
@@ -141,9 +176,30 @@ pub fn div_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
 
     // Let me use a clean approach:
     // result_mant has implicit bit at position 27
-    // Shift right by 4 to get implicit bit at position 23
-    // The 4 bits shifted out become guard bits (we only need 3, but 4 is fine)
+    // We want implicit bit at position 23 with 4 guard bits
+    // But first handle denormalization BEFORE rounding
 
+    // Handle underflow to denormal BEFORE rounding
+    // Currently implicit bit is at position 27, we want to keep 4 guard bits
+    // So target implicit position is 27 (with guard bits at 3-0)
+    let mut is_denormal_result = false;
+    if result_exp <= 0 {
+        let denorm_shift = 1 - result_exp;
+        // Need to shift more to account for denormalization
+        // The result_mant currently has implicit at position 27
+        // We need to shift by (denorm_shift + 4) to put implicit at position (23 - denorm_shift)
+        // But we keep 4 guard bits, so effectively we shift by denorm_shift here
+        // and then the normal shift of 4 later
+        if denorm_shift < 28 {
+            result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
+        } else {
+            result_mant = 0;
+        }
+        result_exp = 0;
+        is_denormal_result = true;
+    }
+
+    // Now shift to remove guard bits and round
     let guard_bits = result_mant & 0xF; // 4 bits
     result_mant = result_mant >> 4;
 
@@ -151,23 +207,16 @@ pub fn div_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     let should_round_up = (guard_bits > 8) | ((guard_bits == 8) & ((result_mant & 1) == 1));
     if should_round_up {
         result_mant = result_mant + 1;
-        if result_mant >= ((FLOAT32_IMPLICIT_BIT as u64) << 1) {
+        // Check for overflow from rounding
+        if !is_denormal_result & (result_mant >= ((FLOAT32_IMPLICIT_BIT as u64) << 1)) {
             result_mant = result_mant >> 1;
             result_exp = result_exp + 1;
         }
-    }
-
-    // Handle underflow to denormal
-    let mut is_denormal_result = false;
-    if result_exp <= 0 {
-        let denorm_shift = 1 - result_exp;
-        if denorm_shift < 24 {
-            result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
-        } else {
-            result_mant = 0;
+        // For denormals, if rounding causes overflow into normal range, adjust
+        if is_denormal_result & (result_mant >= (FLOAT32_IMPLICIT_BIT as u64)) {
+            result_exp = 1;
+            is_denormal_result = false;
         }
-        result_exp = 0;
-        is_denormal_result = true;
     }
 
     // Check for overflow to infinity
