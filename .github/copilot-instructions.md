@@ -1,12 +1,18 @@
-# Copilot Instructions for noir_IEEE754
+# Copilot Instructions for ieee754
 
 IEEE 754 compliant floating-point arithmetic library for Noir (ZK proof DSL).
 
+## Project Structure
+
+This is a Noir workspace with:
+- **`ieee754/`**: Main library package with IEEE 754 implementation
+- **`test_packages/`**: Auto-generated test packages from IBM FPgen suite (~18k tests) - **never edit manually**
+- **`scripts/`**: Test generation and benchmarking tools
+
 ## Architecture Overview
 
-- **`src/float.nr`**: Core IEEE 754 implementation with `IEEE754Float32`/`IEEE754Float64` structs and operations
-- **`src/ieee754_tests/`**: Auto-generated tests from IBM FPgen suite (~18k tests) - **never edit manually**
-- **`scripts/generate_tests.py`**: Downloads test cases from [sergev/ieee754-test-suite](https://github.com/sergev/ieee754-test-suite) and generates Noir tests using Python's `struct` module for IEEE 754 ground truth
+- **`ieee754/src/float.nr`**: Core IEEE 754 implementation with `IEEE754Float32`/`IEEE754Float64` structs and operations
+- **`scripts/generate_tests.py`**: Downloads test cases from [sergev/ieee754-test-suite](https://github.com/sergev/ieee754-test-suite) and generates Noir test packages using Python's `struct` module for IEEE 754 ground truth
 
 ## Noir Language Constraints
 
@@ -46,32 +52,26 @@ if shifted_out != 0 { result | 1 } else { result }
 ## Developer Commands
 
 ```bash
-# Generate tests (default: all operations from Add-Shift.fptest)
-python3 scripts/generate_tests.py -o src/ieee754_tests.nr
-
-# Generate all ~18k tests (all operations)
-python3 scripts/generate_tests.py --all --split
+# Generate test packages (recommended for CI - tests in separate packages)
+python3 scripts/generate_tests.py --all --packages
 
 # Generate tests for specific operations
-python3 scripts/generate_tests.py --all --operation add --split
-python3 scripts/generate_tests.py --all --operation mul --split
-python3 scripts/generate_tests.py --all --operation div --split
+python3 scripts/generate_tests.py --all --packages --operation add
+python3 scripts/generate_tests.py --all --packages --operation mul
+python3 scripts/generate_tests.py --all --packages --operation div
 
-# Run specific test module (RECOMMENDED - full suite takes hours)
-nargo test ieee754_tests::test_add_shift::
-
-# Run single chunk (~25 tests, fastest iteration)
-nargo test ieee754_tests::test_add_shift::chunk_0000::
+# Run tests from a specific package (from project root)
+nargo test --package ieee754_test_add_shift chunk_0000::
 
 # Run single test
-nargo test ieee754_tests::test_add_shift::chunk_0000::test_f32_add_0
+nargo test --package ieee754_test_add_shift chunk_0000::test_f32_add_0
 
-# Run manual unit tests only
-nargo test test_float32
-nargo test test_float64
+# Run manual unit tests only (from project root)
+nargo test --package ieee754 test_float32
+nargo test --package ieee754 test_float64
 ```
 
-> ⚠️ **Warning**: Running `nargo test` without filters executes ~18k tests and takes several hours. Always run individual chunks or modules during development.
+> ⚠️ **Warning**: Running `nargo test` without filters executes ~18k tests and takes several hours. Always run individual chunks or packages during development.
 
 ## Test File Format (`.fptest`)
 ```
@@ -101,6 +101,8 @@ b32+ =0 +1.000000P+0 +1.000000P+0 -> +1.000000P+1
 
 | File | Purpose |
 |------|---------|
-| `src/float.nr` | All IEEE 754 types and arithmetic |
+| `ieee754/src/float.nr` | All IEEE 754 types and arithmetic |
 | `scripts/generate_tests.py` | Test generation from IBM FPgen |
-| `src/ieee754_tests/mod.nr` | Test module index |
+| `test_packages/` | Generated test packages (one per test suite file) |
+| `scripts/generate_tests.py` | Test generation from IBM FPgen |
+| `test_packages/` | Generated test packages (one per test suite file) |

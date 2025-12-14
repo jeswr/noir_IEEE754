@@ -2,10 +2,10 @@
 # Regenerate IEEE 754 test suite for Noir
 #
 # This script downloads test cases from the IBM FPgen suite and generates
-# chunked Noir test files with a CI matrix for GitHub Actions.
+# separate Noir test packages for CI.
 #
 # Usage:
-#   ./scripts/regenerate_tests.sh              # Generate all tests
+#   ./scripts/regenerate_tests.sh              # Generate all tests as packages
 #   ./scripts/regenerate_tests.sh --operation add  # Generate only addition tests
 
 set -e
@@ -19,12 +19,12 @@ echo "Regenerating IEEE 754 test suite..."
 echo "Project root: $PROJECT_ROOT"
 echo ""
 
-# Default arguments
+# Default arguments - use packages mode for separate test packages
 ARGS=(
     --all
-    --split
-    --output-dir src/ieee754_tests
-    --ci-matrix .github/ci-matrix.json
+    --packages
+    --output-dir test_packages
+    --ci-matrix .github/test-matrix.json
 )
 
 # Append any additional arguments passed to this script
@@ -36,5 +36,5 @@ echo ""
 python3 scripts/generate_tests.py "${ARGS[@]}"
 
 echo ""
-echo "Done! Generated tests are in src/ieee754_tests/"
-echo "CI matrix is at .github/ci-matrix.json"
+echo "Done! Generated test packages are in test_packages/"
+echo "CI matrix is at .github/test-matrix.json"

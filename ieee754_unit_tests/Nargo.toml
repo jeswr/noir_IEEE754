@@ -1,0 +1,7 @@
+[package]
+name = "ieee754_unit_tests"
+type = "bin"
+authors = [""]
+
+[dependencies]
+ieee754 = { path = "../ieee754" }

@@ -499,6 +499,23 @@ def analyze_test_code(test_code: list[str]) -> dict[str, bool]:
     }
 
 
+def generate_noir_header_from_analysis_for_package(source_info: str, analysis: dict[str, bool]) -> str:
+    """Generate Noir test file header with only required imports for separate packages."""
+    imports = [name for name, needed in analysis.items() if needed]
+    
+    # Sort imports for consistency
+    imports.sort()
+    imports_str = ", ".join(imports)
+    
+    return f"""// Auto-generated IEEE 754 test cases
+// Generated from: {source_info}
+// Test suite source: https://github.com/sergev/ieee754-test-suite
+
+use ieee754::float::{{{imports_str}}};
+
+"""
+
+
 def generate_noir_header_from_analysis(source_info: str, analysis: dict[str, bool]) -> str:
     """Generate Noir test file header with only required imports."""
     imports = [name for name, needed in analysis.items() if needed]
@@ -544,14 +561,19 @@ def generate_ci_matrix(
     tests_by_file: dict[str, list[TestCase]], 
     output_path: str,
     chunk_size: int = 25,
-    max_chunks_per_group: int = 50,
+    max_tests_per_package: int = 1250,
     force_f64: bool = False,
-    generate_both: bool = False
+    generate_both: bool = False,
+    use_packages: bool = True
 ) -> list[dict]:
     """Generate a CI matrix JSON file for GitHub Actions.
     
-    Groups test modules into CI jobs. Large modules are split into multiple groups.
-    Uses compact representation to keep JSON size small.
+    Lists all packages that will be generated. Large test files are automatically
+    split into multiple packages by generate_noir_packages.
+    
+    Args:
+        max_tests_per_package: Maximum tests per package (50 chunks * 25 tests = 1250)
+        use_packages: If True, generate matrix for separate packages (new style)
     """
     import json
     
@@ -561,8 +583,7 @@ def generate_ci_matrix(
     groups.append({
         "name": "unit-tests",
         "module": "_unit_",
-        "start": 0,
-        "end": 0
+        "package": "ieee754_unit_tests"
     })
     
     for source_file, tests in sorted(tests_by_file.items()):
@@ -579,25 +600,25 @@ def generate_ci_matrix(
         if test_count == 0:
             continue
         
-        num_chunks = (test_count + chunk_size - 1) // chunk_size
+        # Calculate how many packages this test file will generate
+        num_packages = (test_count + max_tests_per_package - 1) // max_tests_per_package
         
-        if num_chunks <= max_chunks_per_group:
-            # Small enough to be a single group - use _all_ to signal whole module
+        if num_packages == 1:
+            # Single package
+            package_name = f"ieee754_{module_name}"
             groups.append({
                 "name": module_name.replace("test_", ""),
                 "module": module_name,
-                "start": 0,
-                "end": num_chunks
+                "package": package_name
             })
         else:
-            # Split into multiple groups, each covering a range of chunks
-            for g in range(0, num_chunks, max_chunks_per_group):
-                end_chunk = min(g + max_chunks_per_group, num_chunks)
+            # Multiple packages - add each one
+            for pkg_idx in range(num_packages):
+                package_name = f"ieee754_{module_name}_part{pkg_idx}"
                 groups.append({
-                    "name": f"{module_name.replace('test_', '')}-{g // max_chunks_per_group}",
+                    "name": f"{module_name.replace('test_', '')}_part{pkg_idx}",
                     "module": module_name,
-                    "start": g,
-                    "end": end_chunk
+                    "package": package_name
                 })
     
     # Write JSON file
@@ -606,6 +627,125 @@ def generate_ci_matrix(
     
     print(f"Generated CI matrix with {len(groups)} groups to {output_path}")
     return groups
+
+
+def generate_noir_packages(
+    tests_by_file: dict[str, list[TestCase]], 
+    output_dir: str, 
+    add_debug: bool = False,
+    chunk_size: int = 25,
+    max_tests_per_package: int = 1250,
+    force_f64: bool = False,
+    generate_both: bool = False
+) -> dict[str, int]:
+    """Generate separate Noir packages for each source file.
+    
+    Each test module becomes one or more Noir packages with:
+    - Nargo.toml with dependency on ieee754
+    - src/main.nr importing chunks as modules
+    - src/chunk_XXXX.nr files with test functions
+    
+    Large test files are automatically split into multiple packages.
+    
+    Args:
+        tests_by_file: Dict mapping source filenames to test cases
+        output_dir: Output directory for generated packages (e.g., 'test_packages')
+        add_debug: Add println statements for debugging
+        chunk_size: Number of tests per chunk file
+        max_tests_per_package: Maximum tests per package before splitting (default 1250 = 50 chunks)
+        force_f64: If True, convert f32 tests to f64 only
+        generate_both: If True, generate both f32 and f64 tests (overrides force_f64)
+    """
+    results = {}
+    package_names = []
+    
+    for source_file, tests in tests_by_file.items():
+        module_name = _source_to_module_name(source_file)
+        
+        # Generate all test code
+        if generate_both:
+            # Generate both f32 tests (index 0..n-1) and f64 tests (index n..2n-1)
+            f32_tests = [
+                code for i, test in enumerate(tests)
+                if (code := generate_noir_test(test, i, add_debug, force_f64=False))
+            ]
+            f64_tests = [
+                code for i, test in enumerate(tests)
+                if (code := generate_noir_test(test, len(tests) + i, add_debug, force_f64=True))
+            ]
+            all_test_code = f32_tests + f64_tests
+        else:
+            all_test_code = [
+                code for i, test in enumerate(tests)
+                if (code := generate_noir_test(test, i, add_debug, force_f64))
+            ]
+        
+        if not all_test_code:
+            continue
+        
+        # Split into multiple packages if too large
+        num_packages = (len(all_test_code) + max_tests_per_package - 1) // max_tests_per_package
+        
+        for pkg_idx in range(num_packages):
+            # Get tests for this package
+            start_idx = pkg_idx * max_tests_per_package
+            end_idx = min(start_idx + max_tests_per_package, len(all_test_code))
+            package_test_code = all_test_code[start_idx:end_idx]
+            
+            # Package name includes part suffix if split
+            if num_packages == 1:
+                package_name = f"ieee754_{module_name}"
+            else:
+                package_name = f"ieee754_{module_name}_part{pkg_idx}"
+            
+            # Create package folder structure
+            package_dir = os.path.join(output_dir, package_name)
+            src_dir = os.path.join(package_dir, "src")
+            os.makedirs(src_dir, exist_ok=True)
+            
+            # Write Nargo.toml
+            nargo_toml = f'''[package]
+name = "{package_name}"
+type = "bin"
+authors = [""]
+
+[dependencies]
+ieee754 = {{ path = "../../ieee754" }}
+'''
+            with open(os.path.join(package_dir, "Nargo.toml"), 'w') as f:
+                f.write(nargo_toml)
+            
+            # Generate chunks for this package
+            chunks = [package_test_code[i:i + chunk_size] for i in range(0, len(package_test_code), chunk_size)]
+            chunk_names = []
+            
+            for chunk_idx, chunk in enumerate(chunks):
+                chunk_name = f"chunk_{chunk_idx:04d}"
+                chunk_names.append(chunk_name)
+                
+                # Analyze this chunk to determine required imports
+                analysis = analyze_test_code(chunk)
+                header = generate_noir_header_from_analysis_for_package(f"{source_file} (chunk {chunk_idx})", analysis)
+                
+                with open(os.path.join(src_dir, f"{chunk_name}.nr"), 'w') as f:
+                    f.write(header)
+                    f.write('\n'.join(chunk))
+            
+            # Generate src/main.nr for this package (bin package needs main)
+            part_info = f" (part {pkg_idx + 1}/{num_packages})" if num_packages > 1 else ""
+            with open(os.path.join(src_dir, "main.nr"), 'w') as f:
+                f.write(f"// Auto-generated IEEE 754 test package for {source_file}{part_info}\n")
+                f.write(f"// Contains {len(package_test_code)} tests in {len(chunks)} chunks of {chunk_size}\n\n")
+                f.writelines(f"mod {name};\n" for name in chunk_names)
+                f.write("\nfn main() {}\n")
+            
+            print(f"Generated package {package_name} with {len(package_test_code)} tests in {len(chunks)} chunks")
+            package_names.append(package_name)
+        
+        results[source_file] = len(all_test_code)
+    
+    print(f"\nGenerated {len(package_names)} test packages in {output_dir}/")
+    return results
 
 
 def generate_noir_file_per_source(
@@ -741,8 +881,9 @@ Examples:
   %(prog)s                              # Download and use Add-Shift.fptest (default)
   %(prog)s --files Add-Shift.fptest     # Use specific file(s)
   %(prog)s --all                        # Use all available test files
-  %(prog)s --all --split                # Generate chunked test folders per source
-  %(prog)s --all --split --chunk-size 50  # Use 50 tests per chunk file
+  %(prog)s --all --packages             # Generate separate test packages (recommended)
+  %(prog)s --all --split                # Generate chunked test folders per source (old style)
+  %(prog)s --all --packages --chunk-size 50  # Use 50 tests per chunk file
   %(prog)s --list                       # List available test files
   %(prog)s --local test.fptest          # Use a local file instead of downloading
         """
@@ -782,13 +923,24 @@ Examples:
     parser.add_argument(
         '--split',
         action='store_true',
-        help='Generate separate test files for each source file'
+        help='Generate separate test files for each source file (old style, as modules in src/)'
+    )
+    parser.add_argument(
+        '--packages',
+        action='store_true',
+        help='Generate separate Noir packages for each test module (recommended for CI)'
     )
     parser.add_argument(
         '--chunk-size',
         type=int,
         default=25,
         help='Number of tests per chunk file when using --split (default: 25)'
+    )
+    parser.add_argument(
+        '--max-tests-per-package',
+        type=int,
+        default=1250,
+        help='Maximum tests per package before splitting into multiple packages (default: 1250)'
     )
     parser.add_argument(
         '--operation',
@@ -916,7 +1068,52 @@ Examples:
         
         return result
     
-    if args.split:
+    if args.packages:
+        # Generate separate packages for each test module
+        output_dir = args.output_dir or "test_packages"
+        os.makedirs(output_dir, exist_ok=True)
+        
+        tests_by_file = {}
+        total_parsed = 0
+        
+        for filepath in fptest_files:
+            source_name = os.path.basename(filepath)
+            print(f"Parsing {source_name}...")
+            tests = parse_fptest_file(filepath)
+            total_parsed += len(tests)
+            filtered = filter_tests(tests)
+            if filtered:
+                tests_by_file[source_name] = filtered
+                print(f"  {len(tests)} parsed, {len(filtered)} after filtering")
+        
+        print(f"\nParsed {total_parsed} total test cases")
+        
+        results = generate_noir_packages(
+            tests_by_file, 
+            output_dir, 
+            add_debug=args.debug,
+            chunk_size=args.chunk_size,
+            max_tests_per_package=args.max_tests_per_package,
+            force_f64=args.generate_f64,
+            generate_both=args.generate_f64  # When --generate-f64 is set, generate both
+        )
+        
+        total_generated = sum(results.values())
+        print(f"\nTotal: {total_generated} tests generated across {len(results)} packages")
+        
+        # Generate CI matrix if requested
+        if args.ci_matrix:
+            generate_ci_matrix(
+                tests_by_file, 
+                args.ci_matrix, 
+                chunk_size=args.chunk_size, 
+                max_tests_per_package=args.max_tests_per_package,
+                force_f64=args.generate_f64, 
+                generate_both=args.generate_f64,
+                use_packages=True
+            )
+    
+    elif args.split:
         # Generate separate files per source
         output_dir = args.output_dir or "src/ieee754_tests"
         os.makedirs(output_dir, exist_ok=True)

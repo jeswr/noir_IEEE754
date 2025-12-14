@@ -4,7 +4,12 @@
 # Noir build outputs
 target/
 
+# Generated test packages (created by scripts/generate_tests.py --packages)
+test_packages/
+
+# Legacy test module location (no longer used)
 src/ieee754_tests/
+
 scripts/__pycache__/
 
 # OS files

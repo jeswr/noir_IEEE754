@@ -1,6 +1,5 @@
-[package]
-name = "noir_IEEE754"
-type = "lib"
-authors = [""]
-
-[dependencies]
+[workspace]
+members = [
+    "ieee754",
+    "ieee754_unit_tests"
+]

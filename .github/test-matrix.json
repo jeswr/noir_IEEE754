@@ -3,446 +3,222 @@
     {
       "name": "unit-tests",
       "module": "_unit_",
-      "start": 0,
-      "end": 0
+      "package": "ieee754_unit_tests"
     },
     {
       "name": "add_cancellation_and_subnorm_result",
       "module": "test_add_cancellation_and_subnorm_result",
-      "start": 0,
-      "end": 48
+      "package": "ieee754_test_add_cancellation_and_subnorm_result"
     },
     {
       "name": "add_cancellation",
       "module": "test_add_cancellation",
-      "start": 0,
-      "end": 3
+      "package": "ieee754_test_add_cancellation"
     },
     {
-      "name": "add_shift_and_special_significands-0",
+      "name": "add_shift_and_special_significands_part0",
       "module": "test_add_shift_and_special_significands",
-      "start": 0,
-      "end": 50
+      "package": "ieee754_test_add_shift_and_special_significands_part0"
     },
     {
-      "name": "add_shift_and_special_significands-1",
+      "name": "add_shift_and_special_significands_part1",
       "module": "test_add_shift_and_special_significands",
-      "start": 50,
-      "end": 100
+      "package": "ieee754_test_add_shift_and_special_significands_part1"
     },
     {
-      "name": "add_shift_and_special_significands-2",
+      "name": "add_shift_and_special_significands_part2",
       "module": "test_add_shift_and_special_significands",
-      "start": 100,
-      "end": 150
+      "package": "ieee754_test_add_shift_and_special_significands_part2"
     },
     {
-      "name": "add_shift_and_special_significands-3",
+      "name": "add_shift_and_special_significands_part3",
       "module": "test_add_shift_and_special_significands",
-      "start": 150,
-      "end": 200
+      "package": "ieee754_test_add_shift_and_special_significands_part3"
     },
     {
-      "name": "add_shift_and_special_significands-4",
+      "name": "add_shift_and_special_significands_part4",
       "module": "test_add_shift_and_special_significands",
-      "start": 200,
-      "end": 250
+      "package": "ieee754_test_add_shift_and_special_significands_part4"
     },
     {
-      "name": "add_shift_and_special_significands-5",
+      "name": "add_shift_and_special_significands_part5",
       "module": "test_add_shift_and_special_significands",
-      "start": 250,
-      "end": 300
+      "package": "ieee754_test_add_shift_and_special_significands_part5"
     },
     {
-      "name": "add_shift_and_special_significands-6",
+      "name": "add_shift_and_special_significands_part6",
       "module": "test_add_shift_and_special_significands",
-      "start": 300,
-      "end": 350
+      "package": "ieee754_test_add_shift_and_special_significands_part6"
     },
     {
-      "name": "add_shift_and_special_significands-7",
+      "name": "add_shift_and_special_significands_part7",
       "module": "test_add_shift_and_special_significands",
-      "start": 350,
-      "end": 400
+      "package": "ieee754_test_add_shift_and_special_significands_part7"
     },
     {
-      "name": "add_shift_and_special_significands-8",
+      "name": "add_shift_and_special_significands_part8",
       "module": "test_add_shift_and_special_significands",
-      "start": 400,
-      "end": 450
+      "package": "ieee754_test_add_shift_and_special_significands_part8"
     },
     {
-      "name": "add_shift_and_special_significands-9",
+      "name": "add_shift_and_special_significands_part9",
       "module": "test_add_shift_and_special_significands",
-      "start": 450,
-      "end": 500
+      "package": "ieee754_test_add_shift_and_special_significands_part9"
     },
     {
-      "name": "add_shift_and_special_significands-10",
+      "name": "add_shift_and_special_significands_part10",
       "module": "test_add_shift_and_special_significands",
-      "start": 500,
-      "end": 550
+      "package": "ieee754_test_add_shift_and_special_significands_part10"
     },
     {
-      "name": "add_shift_and_special_significands-11",
+      "name": "add_shift_and_special_significands_part11",
       "module": "test_add_shift_and_special_significands",
-      "start": 550,
-      "end": 600
+      "package": "ieee754_test_add_shift_and_special_significands_part11"
     },
     {
-      "name": "add_shift_and_special_significands-12",
+      "name": "add_shift_and_special_significands_part12",
       "module": "test_add_shift_and_special_significands",
-      "start": 600,
-      "end": 650
+      "package": "ieee754_test_add_shift_and_special_significands_part12"
     },
     {
-      "name": "add_shift_and_special_significands-13",
+      "name": "add_shift_and_special_significands_part13",
       "module": "test_add_shift_and_special_significands",
-      "start": 650,
-      "end": 700
+      "package": "ieee754_test_add_shift_and_special_significands_part13"
     },
     {
-      "name": "add_shift_and_special_significands-14",
+      "name": "add_shift_and_special_significands_part14",
       "module": "test_add_shift_and_special_significands",
-      "start": 700,
-      "end": 750
+      "package": "ieee754_test_add_shift_and_special_significands_part14"
     },
     {
-      "name": "add_shift_and_special_significands-15",
+      "name": "add_shift_and_special_significands_part15",
       "module": "test_add_shift_and_special_significands",
-      "start": 750,
-      "end": 800
+      "package": "ieee754_test_add_shift_and_special_significands_part15"
     },
     {
-      "name": "add_shift_and_special_significands-16",
+      "name": "add_shift_and_special_significands_part16",
       "module": "test_add_shift_and_special_significands",
-      "start": 800,
-      "end": 850
+      "package": "ieee754_test_add_shift_and_special_significands_part16"
     },
     {
-      "name": "add_shift_and_special_significands-17",
+      "name": "add_shift_and_special_significands_part17",
       "module": "test_add_shift_and_special_significands",
-      "start": 850,
-      "end": 900
+      "package": "ieee754_test_add_shift_and_special_significands_part17"
     },
     {
-      "name": "add_shift_and_special_significands-18",
+      "name": "add_shift_and_special_significands_part18",
       "module": "test_add_shift_and_special_significands",
-      "start": 900,
-      "end": 950
+      "package": "ieee754_test_add_shift_and_special_significands_part18"
     },
     {
-      "name": "add_shift_and_special_significands-19",
+      "name": "add_shift_and_special_significands_part19",
       "module": "test_add_shift_and_special_significands",
-      "start": 950,
-      "end": 1000
+      "package": "ieee754_test_add_shift_and_special_significands_part19"
     },
     {
-      "name": "add_shift_and_special_significands-20",
+      "name": "add_shift_and_special_significands_part20",
       "module": "test_add_shift_and_special_significands",
-      "start": 1000,
-      "end": 1050
+      "package": "ieee754_test_add_shift_and_special_significands_part20"
     },
     {
-      "name": "add_shift_and_special_significands-21",
+      "name": "add_shift_and_special_significands_part21",
       "module": "test_add_shift_and_special_significands",
-      "start": 1050,
-      "end": 1100
+      "package": "ieee754_test_add_shift_and_special_significands_part21"
     },
     {
-      "name": "add_shift_and_special_significands-22",
+      "name": "add_shift_and_special_significands_part22",
       "module": "test_add_shift_and_special_significands",
-      "start": 1100,
-      "end": 1150
+      "package": "ieee754_test_add_shift_and_special_significands_part22"
     },
     {
-      "name": "add_shift_and_special_significands-23",
+      "name": "add_shift_and_special_significands_part23",
       "module": "test_add_shift_and_special_significands",
-      "start": 1150,
-      "end": 1200
+      "package": "ieee754_test_add_shift_and_special_significands_part23"
     },
     {
-      "name": "add_shift_and_special_significands-24",
+      "name": "add_shift_and_special_significands_part24",
       "module": "test_add_shift_and_special_significands",
-      "start": 1200,
-      "end": 1250
+      "package": "ieee754_test_add_shift_and_special_significands_part24"
     },
     {
-      "name": "add_shift_and_special_significands-25",
+      "name": "add_shift_and_special_significands_part25",
       "module": "test_add_shift_and_special_significands",
-      "start": 1250,
-      "end": 1300
+      "package": "ieee754_test_add_shift_and_special_significands_part25"
     },
     {
-      "name": "add_shift_and_special_significands-26",
+      "name": "add_shift_and_special_significands_part26",
       "module": "test_add_shift_and_special_significands",
-      "start": 1300,
-      "end": 1350
-    },
-    {
-      "name": "add_shift_and_special_significands-27",
-      "module": "test_add_shift_and_special_significands",
-      "start": 1350,
-      "end": 1400
-    },
-    {
-      "name": "add_shift_and_special_significands-28",
-      "module": "test_add_shift_and_special_significands",
-      "start": 1400,
-      "end": 1450
-    },
-    {
-      "name": "add_shift_and_special_significands-29",
-      "module": "test_add_shift_and_special_significands",
-      "start": 1450,
-      "end": 1500
-    },
-    {
-      "name": "add_shift_and_special_significands-30",
-      "module": "test_add_shift_and_special_significands",
-      "start": 1500,
-      "end": 1550
-    },
-    {
-      "name": "add_shift_and_special_significands-31",
-      "module": "test_add_shift_and_special_significands",
-      "start": 1550,
-      "end": 1600
-    },
-    {
-      "name": "add_shift_and_special_significands-32",
-      "module": "test_add_shift_and_special_significands",
-      "start": 1600,
-      "end": 1650
-    },
-    {
-      "name": "add_shift_and_special_significands-33",
-      "module": "test_add_shift_and_special_significands",
-      "start": 1650,
-      "end": 1700
-    },
-    {
-      "name": "add_shift_and_special_significands-34",
-      "module": "test_add_shift_and_special_significands",
-      "start": 1700,
-      "end": 1750
-    },
-    {
-      "name": "add_shift_and_special_significands-35",
-      "module": "test_add_shift_and_special_significands",
-      "start": 1750,
-      "end": 1800
-    },
-    {
-      "name": "add_shift_and_special_significands-36",
-      "module": "test_add_shift_and_special_significands",
-      "start": 1800,
-      "end": 1850
-    },
-    {
-      "name": "add_shift_and_special_significands-37",
-      "module": "test_add_shift_and_special_significands",
-      "start": 1850,
-      "end": 1900
-    },
-    {
-      "name": "add_shift_and_special_significands-38",
-      "module": "test_add_shift_and_special_significands",
-      "start": 1900,
-      "end": 1950
-    },
-    {
-      "name": "add_shift_and_special_significands-39",
-      "module": "test_add_shift_and_special_significands",
-      "start": 1950,
-      "end": 2000
-    },
-    {
-      "name": "add_shift_and_special_significands-40",
-      "module": "test_add_shift_and_special_significands",
-      "start": 2000,
-      "end": 2050
-    },
-    {
-      "name": "add_shift_and_special_significands-41",
-      "module": "test_add_shift_and_special_significands",
-      "start": 2050,
-      "end": 2100
-    },
-    {
-      "name": "add_shift_and_special_significands-42",
-      "module": "test_add_shift_and_special_significands",
-      "start": 2100,
-      "end": 2150
-    },
-    {
-      "name": "add_shift_and_special_significands-43",
-      "module": "test_add_shift_and_special_significands",
-      "start": 2150,
-      "end": 2200
-    },
-    {
-      "name": "add_shift_and_special_significands-44",
-      "module": "test_add_shift_and_special_significands",
-      "start": 2200,
-      "end": 2250
-    },
-    {
-      "name": "add_shift_and_special_significands-45",
-      "module": "test_add_shift_and_special_significands",
-      "start": 2250,
-      "end": 2300
-    },
-    {
-      "name": "add_shift_and_special_significands-46",
-      "module": "test_add_shift_and_special_significands",
-      "start": 2300,
-      "end": 2350
-    },
-    {
-      "name": "add_shift_and_special_significands-47",
-      "module": "test_add_shift_and_special_significands",
-      "start": 2350,
-      "end": 2400
-    },
-    {
-      "name": "add_shift_and_special_significands-48",
-      "module": "test_add_shift_and_special_significands",
-      "start": 2400,
-      "end": 2450
-    },
-    {
-      "name": "add_shift_and_special_significands-49",
-      "module": "test_add_shift_and_special_significands",
-      "start": 2450,
-      "end": 2500
-    },
-    {
-      "name": "add_shift_and_special_significands-50",
-      "module": "test_add_shift_and_special_significands",
-      "start": 2500,
-      "end": 2550
-    },
-    {
-      "name": "add_shift_and_special_significands-51",
-      "module": "test_add_shift_and_special_significands",
-      "start": 2550,
-      "end": 2600
-    },
-    {
-      "name": "add_shift_and_special_significands-52",
-      "module": "test_add_shift_and_special_significands",
-      "start": 2600,
-      "end": 2636
+      "package": "ieee754_test_add_shift_and_special_significands_part26"
     },
     {
       "name": "add_shift",
       "module": "test_add_shift",
-      "start": 0,
-      "end": 10
+      "package": "ieee754_test_add_shift"
     },
     {
-      "name": "basic_types_inputs-0",
+      "name": "basic_types_inputs_part0",
       "module": "test_basic_types_inputs",
-      "start": 0,
-      "end": 50
+      "package": "ieee754_test_basic_types_inputs_part0"
     },
     {
-      "name": "basic_types_inputs-1",
+      "name": "basic_types_inputs_part1",
       "module": "test_basic_types_inputs",
-      "start": 50,
-      "end": 100
+      "package": "ieee754_test_basic_types_inputs_part1"
     },
     {
-      "name": "basic_types_inputs-2",
+      "name": "basic_types_inputs_part2",
       "module": "test_basic_types_inputs",
-      "start": 100,
-      "end": 150
-    },
-    {
-      "name": "basic_types_inputs-3",
-      "module": "test_basic_types_inputs",
-      "start": 150,
-      "end": 200
-    },
-    {
-      "name": "basic_types_inputs-4",
-      "module": "test_basic_types_inputs",
-      "start": 200,
-      "end": 250
-    },
-    {
-      "name": "basic_types_inputs-5",
-      "module": "test_basic_types_inputs",
-      "start": 250,
-      "end": 283
+      "package": "ieee754_test_basic_types_inputs_part2"
     },
     {
       "name": "basic_types_intermediate",
       "module": "test_basic_types_intermediate",
-      "start": 0,
-      "end": 13
+      "package": "ieee754_test_basic_types_intermediate"
     },
     {
       "name": "corner_rounding",
       "module": "test_corner_rounding",
-      "start": 0,
-      "end": 2
+      "package": "ieee754_test_corner_rounding"
     },
     {
       "name": "divide_divide_by_zero_exception",
       "module": "test_divide_divide_by_zero_exception",
-      "start": 0,
-      "end": 2
+      "package": "ieee754_test_divide_divide_by_zero_exception"
     },
     {
       "name": "divide_trailing_zeros",
       "module": "test_divide_trailing_zeros",
-      "start": 0,
-      "end": 2
+      "package": "ieee754_test_divide_trailing_zeros"
     },
     {
       "name": "hamming_distance",
       "module": "test_hamming_distance",
-      "start": 0,
-      "end": 18
+      "package": "ieee754_test_hamming_distance"
     },
     {
-      "name": "input_special_significand-0",
+      "name": "input_special_significand",
       "module": "test_input_special_significand",
-      "start": 0,
-      "end": 50
-    },
-    {
-      "name": "input_special_significand-1",
-      "module": "test_input_special_significand",
-      "start": 50,
-      "end": 93
+      "package": "ieee754_test_input_special_significand"
     },
     {
       "name": "overflow",
       "module": "test_overflow",
-      "start": 0,
-      "end": 20
+      "package": "ieee754_test_overflow"
     },
     {
       "name": "rounding",
       "module": "test_rounding",
-      "start": 0,
-      "end": 5
+      "package": "ieee754_test_rounding"
     },
     {
       "name": "underflow",
       "module": "test_underflow",
-      "start": 0,
-      "end": 18
+      "package": "ieee754_test_underflow"
     },
     {
       "name": "vicinity_of_rounding_boundaries",
       "module": "test_vicinity_of_rounding_boundaries",
-      "start": 0,
-      "end": 9
+      "package": "ieee754_test_vicinity_of_rounding_boundaries"
     }
   ]
 }

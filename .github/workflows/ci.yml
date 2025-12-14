@@ -23,7 +23,7 @@ jobs:
           python-version: '3.12'
 
       - name: Generate IEEE 754 tests and CI matrix
-        run: python3 scripts/generate_tests.py --all --split --output-dir src/ieee754_tests --ci-matrix .github/test-matrix.json
+        run: python3 scripts/generate_tests.py --all --packages --output-dir test_packages --ci-matrix .github/test-matrix.json
 
       - name: Read test matrix
         id: matrix
@@ -41,7 +41,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ieee754-tests
-          path: src/ieee754_tests/
+          path: test_packages/
           retention-days: 1
 
   # Read Noir versions from config file
@@ -81,7 +81,7 @@ jobs:
           toolchain: ${{ matrix.noir-version }}
 
       - name: Check format
-        run: nargo fmt --check
+        run: nargo fmt --check --package ieee754
 
   # Run unit tests on all Noir versions
   unit-tests:
@@ -104,8 +104,8 @@ jobs:
       - name: Run unit tests
         run: |
           echo "Running unit tests"
-          nargo test test_float32 || exit 1
-          nargo test test_float64 || exit 1
+          nargo test --package ieee754_unit_tests test_float32 || exit 1
+          nargo test --package ieee754_unit_tests test_float64 || exit 1
 
   # Run IEEE 754 test suite only on latest Noir version
   ieee754-tests:
@@ -127,31 +127,43 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ieee754-tests
-          path: src/ieee754_tests/
+          path: test_packages/
 
       - name: Install Noir
         uses: noir-lang/noirup@v0.1.4
         with:
           toolchain: ${{ needs.setup.outputs.latest-version }}
 
+      - name: Add test packages to workspace
+        run: |
+          python3 << 'EOF'
+          import os
+          import glob
+          
+          # Find all test packages
+          packages = sorted(glob.glob("test_packages/ieee754_*"))
+          packages = [p for p in packages if os.path.isdir(p)]
+          
+          print(f"Found {len(packages)} test packages")
+          
+          # Generate Nargo.toml
+          members = ['    "ieee754"', '    "ieee754_unit_tests"']
+          members.extend(f'    "{pkg}"' for pkg in packages)
+          
+          content = "[workspace]\nmembers = [\n" + ",\n".join(members) + "\n]\n"
+          
+          with open("Nargo.toml", "w") as f:
+              f.write(content)
+          
+          print("Updated Nargo.toml:")
+          print(content)
+          EOF
+
       - name: Run tests - ${{ matrix.group.name }}
         run: |
-          MODULE="${{ matrix.group.module }}"
-          START=${{ matrix.group.start }}
-          END=${{ matrix.group.end }}
-          
-          if [ "$START" = "0" ] && [ "$END" -gt "50" ] || [ "$((END - START))" -gt "50" ]; then
-            # Large range - run whole module (shouldn't happen with current grouping)
-            echo "Running all tests in module: $MODULE"
-            nargo test "ieee754_tests::${MODULE}::" || exit 1
-          else
-            # Run specific chunk range
-            for i in $(seq $START $((END - 1))); do
-              CHUNK=$(printf "chunk_%04d" $i)
-              echo "Running tests: ieee754_tests::${MODULE}::${CHUNK}::"
-              nargo test "ieee754_tests::${MODULE}::${CHUNK}::" || exit 1
-            done
-          fi
+          PACKAGE="${{ matrix.group.package }}"
+          echo "Running all tests in package: $PACKAGE"
+          nargo test --package "$PACKAGE" || exit 1
         shell: bash
 
   # Summary job that depends on all test jobs
