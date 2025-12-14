@@ -7,6 +7,7 @@ pub(crate) mod add;
 pub(crate) mod mul;
 pub(crate) mod div;
 pub(crate) mod cmp;
+pub(crate) mod sqrt;
 
 // Re-export all public functions
 pub use helpers::{
@@ -18,6 +19,7 @@ pub use add::add_float32;
 pub use div::div_float32;
 pub use mul::mul_float32;
 pub use cmp::{float32_eq, float32_ne, float32_lt, float32_le, float32_gt, float32_ge, float32_unordered, float32_compare};
+pub use sqrt::sqrt_float32;
 
 // Subtraction is implemented as a + (-b)
 use crate::types::IEEE754Float32;

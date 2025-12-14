@@ -9,6 +9,8 @@ use ieee754::float::{
     // Comparison operations
     float64_eq, float64_ne, float64_lt, float64_le, float64_gt, float64_ge,
     float64_unordered, float64_compare,
+    // Square root
+    sqrt_float64,
 };
 
 // ============================================================================
@@ -377,4 +379,94 @@ fn test_float64_compare_nan() {
 
     // everything > -NaN
     assert(float64_compare(one, neg_nan) == 1);
+}
+
+// ============================================================================
+// Float64 Square Root Tests
+// ============================================================================
+
+#[test]
+fn test_float64_sqrt_basic() {
+    // sqrt(4.0) = 2.0
+    let four = float64_from_bits(0x4010000000000000); // 4.0
+    let result = sqrt_float64(four);
+    assert(float64_to_bits(result) == 0x4000000000000000); // 2.0
+}
+
+#[test]
+fn test_float64_sqrt_one() {
+    // sqrt(1.0) = 1.0
+    let one = float64_from_bits(0x3FF0000000000000); // 1.0
+    let result = sqrt_float64(one);
+    assert(float64_to_bits(result) == 0x3FF0000000000000); // 1.0
+}
+
+#[test]
+fn test_float64_sqrt_two() {
+    // sqrt(2.0) = ~1.4142135623730951
+    let two = float64_from_bits(0x4000000000000000); // 2.0
+    let result = sqrt_float64(two);
+    // Expected: 0x3FF6A09E667F3BCD (1.4142135623730951)
+    assert(float64_to_bits(result) == 0x3FF6A09E667F3BCD);
+}
+
+#[test]
+fn test_float64_sqrt_nine() {
+    // sqrt(9.0) = 3.0
+    let nine = float64_from_bits(0x4022000000000000); // 9.0
+    let result = sqrt_float64(nine);
+    assert(float64_to_bits(result) == 0x4008000000000000); // 3.0
+}
+
+#[test]
+fn test_float64_sqrt_quarter() {
+    // sqrt(0.25) = 0.5
+    let quarter = float64_from_bits(0x3FD0000000000000); // 0.25
+    let result = sqrt_float64(quarter);
+    assert(float64_to_bits(result) == 0x3FE0000000000000); // 0.5
+}
+
+#[test]
+fn test_float64_sqrt_zero() {
+    // sqrt(+0) = +0
+    let pos_zero = float64_zero(0);
+    let result = sqrt_float64(pos_zero);
+    assert(float64_is_zero(result));
+    assert(result.sign == 0);
+
+    // sqrt(-0) = -0
+    let neg_zero = float64_zero(1);
+    let result2 = sqrt_float64(neg_zero);
+    assert(float64_is_zero(result2));
+    assert(result2.sign == 1);
+}
+
+#[test]
+fn test_float64_sqrt_infinity() {
+    // sqrt(+Inf) = +Inf
+    let inf = float64_infinity(0);
+    let result = sqrt_float64(inf);
+    assert(float64_is_infinity(result));
+    assert(result.sign == 0);
+}
+
+#[test]
+fn test_float64_sqrt_negative() {
+    // sqrt(negative) = NaN
+    let neg_one = float64_from_bits(0xBFF0000000000000); // -1.0
+    let result = sqrt_float64(neg_one);
+    assert(float64_is_nan(result));
+
+    // sqrt(-Inf) = NaN
+    let neg_inf = float64_infinity(1);
+    let result2 = sqrt_float64(neg_inf);
+    assert(float64_is_nan(result2));
+}
+
+#[test]
+fn test_float64_sqrt_nan() {
+    // sqrt(NaN) = NaN
+    let nan = float64_nan();
+    let result = sqrt_float64(nan);
+    assert(float64_is_nan(result));
 }
