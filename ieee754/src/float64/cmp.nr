@@ -9,8 +9,8 @@
 // - Comparisons are signed (negative numbers < positive numbers)
 // ============================================================================
 
-use crate::types::IEEE754Float64;
 use crate::float64::helpers::{float64_is_nan, float64_is_zero};
+use crate::types::IEEE754Float64;
 
 // IEEE 754 equality comparison
 // Returns true if a == b

@@ -31,12 +31,13 @@ This library provides IEEE 754 standard floating-point operations in Noir, enabl
 ### Current Operations
 
 | Operation | Float32 | Float64 |
-|-----------|---------|---------|
+|-----------|---------|---------||
 | Addition  | ✅       | ✅       |
 | Subtraction | ✅     | ✅      |
 | Multiplication | ✅  | ✅      |
 | Division | ✅       | ✅      |
 | Square Root | ✅     | ✅      |
+| Absolute Value | ✅   | ✅      |
 | Comparison (eq, ne, lt, le, gt, ge) | ✅ | ✅ |
 
 ## Installation
@@ -117,6 +118,7 @@ use ieee754::float::{
     mul_float32, mul_float64,
     div_float32, div_float64,
     sqrt_float32, sqrt_float64,
+    abs_float32, abs_float64,
     // Comparison operations
     float32_eq, float32_ne, float32_lt, float32_le, float32_gt, float32_ge,
     float64_eq, float64_ne, float64_lt, float64_le, float64_gt, float64_ge
@@ -133,6 +135,7 @@ fn main() {
     let product = mul_float32(a, b);    // 3.0 * 2.0 = 6.0
     let quotient = div_float32(a, b);   // 3.0 / 2.0 = 1.5
     let root = sqrt_float32(a);         // sqrt(3.0) ≈ 1.732
+    let magnitude = abs_float32(float32_from_bits(0xBF800000)); // abs(-1.0) = 1.0
     
     // Convert back to bits
     let sum_bits = float32_to_bits(sum);         // 0x40A00000 = 5.0f
@@ -158,6 +161,9 @@ float32_zero(sign)      // Returns ±0
 
 // Square root (IEEE 754 compliant)
 sqrt_float32(x)         // sqrt(x), returns NaN for negative inputs (except -0)
+
+// Absolute value (IEEE 754 compliant)
+abs_float32(x)          // |x|, returns magnitude with sign bit cleared
 
 // Comparison functions (IEEE 754 compliant)
 float32_eq(a, b)        // a == b (NaN != NaN, +0 == -0)

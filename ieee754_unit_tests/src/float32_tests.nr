@@ -5,10 +5,10 @@
 use ieee754::float::{
     add_float32, div_float32, float32_from_bits, float32_infinity, float32_is_infinity,
     float32_is_nan, float32_is_zero, float32_nan, float32_to_bits, float32_zero, mul_float32,
-    sub_float32,
+    sub_float32, abs_float32,
     // Comparison operations
-    float32_eq, float32_ne, float32_lt, float32_le, float32_gt, float32_ge,
-    float32_unordered, float32_compare,
+    float32_eq, float32_ne, float32_lt, float32_le, float32_gt, float32_ge, float32_unordered,
+    float32_compare,
     // Square root
     sqrt_float32,
 };
@@ -545,4 +545,73 @@ fn test_float32_sqrt_nan() {
     let nan = float32_nan();
     let result = sqrt_float32(nan);
     assert(float32_is_nan(result));
+}
+
+// ============================================================================
+// Float32 Absolute Value Tests
+// ============================================================================
+
+#[test]
+fn test_float32_abs_positive() {
+    // abs(1.0) = 1.0
+    let one = float32_from_bits(0x3F800000); // 1.0
+    let result = abs_float32(one);
+    assert(float32_to_bits(result) == 0x3F800000);
+
+    // abs(3.14) = 3.14
+    let pi = float32_from_bits(0x4048F5C3); // ~3.14
+    let result2 = abs_float32(pi);
+    assert(float32_to_bits(result2) == 0x4048F5C3);
+}
+
+#[test]
+fn test_float32_abs_negative() {
+    // abs(-1.0) = 1.0
+    let neg_one = float32_from_bits(0xBF800000); // -1.0
+    let result = abs_float32(neg_one);
+    assert(float32_to_bits(result) == 0x3F800000); // 1.0
+
+    // abs(-3.14) = 3.14
+    let neg_pi = float32_from_bits(0xC048F5C3); // ~-3.14
+    let result2 = abs_float32(neg_pi);
+    assert(float32_to_bits(result2) == 0x4048F5C3); // ~3.14
+}
+
+#[test]
+fn test_float32_abs_zero() {
+    // abs(+0) = +0
+    let pos_zero = float32_zero(0);
+    let result = abs_float32(pos_zero);
+    assert(float32_is_zero(result));
+    assert(result.sign == 0);
+
+    // abs(-0) = +0
+    let neg_zero = float32_zero(1);
+    let result2 = abs_float32(neg_zero);
+    assert(float32_is_zero(result2));
+    assert(result2.sign == 0);
+}
+
+#[test]
+fn test_float32_abs_infinity() {
+    // abs(+Inf) = +Inf
+    let pos_inf = float32_infinity(0);
+    let result = abs_float32(pos_inf);
+    assert(float32_is_infinity(result));
+    assert(result.sign == 0);
+
+    // abs(-Inf) = +Inf
+    let neg_inf = float32_infinity(1);
+    let result2 = abs_float32(neg_inf);
+    assert(float32_is_infinity(result2));
+    assert(result2.sign == 0);
+}
+
+#[test]
+fn test_float32_abs_nan() {
+    // abs(NaN) = NaN (with sign bit cleared)
+    let nan = float32_nan();
+    let result = abs_float32(nan);
+    assert(float32_is_nan(result));
+    assert(result.sign == 0);
 }

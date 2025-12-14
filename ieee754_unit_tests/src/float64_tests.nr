@@ -5,10 +5,10 @@
 use ieee754::float::{
     add_float64, div_float64, float64_from_bits, float64_infinity, float64_is_infinity,
     float64_is_nan, float64_is_zero, float64_nan, float64_to_bits, float64_zero, mul_float64,
-    sub_float64,
+    sub_float64, abs_float64,
     // Comparison operations
-    float64_eq, float64_ne, float64_lt, float64_le, float64_gt, float64_ge,
-    float64_unordered, float64_compare,
+    float64_eq, float64_ne, float64_lt, float64_le, float64_gt, float64_ge, float64_unordered,
+    float64_compare,
     // Square root
     sqrt_float64,
 };
@@ -365,7 +365,8 @@ fn test_float64_compare_basic() {
 #[test]
 fn test_float64_compare_nan() {
     let nan = float64_nan();
-    let neg_nan = ieee754::float::IEEE754Float64 { sign: 1, exponent: 2047, mantissa: 0x8000000000000 };
+    let neg_nan =
+        ieee754::float::IEEE754Float64 { sign: 1, exponent: 2047, mantissa: 0x8000000000000 };
     let one = float64_from_bits(0x3FF0000000000000);
 
     // +NaN > everything
@@ -469,4 +470,73 @@ fn test_float64_sqrt_nan() {
     let nan = float64_nan();
     let result = sqrt_float64(nan);
     assert(float64_is_nan(result));
+}
+
+// ============================================================================
+// Float64 Absolute Value Tests
+// ============================================================================
+
+#[test]
+fn test_float64_abs_positive() {
+    // abs(1.0) = 1.0
+    let one = float64_from_bits(0x3FF0000000000000); // 1.0
+    let result = abs_float64(one);
+    assert(float64_to_bits(result) == 0x3FF0000000000000);
+
+    // abs(3.14) = 3.14
+    let pi = float64_from_bits(0x40091EB851EB851F); // ~3.14
+    let result2 = abs_float64(pi);
+    assert(float64_to_bits(result2) == 0x40091EB851EB851F);
+}
+
+#[test]
+fn test_float64_abs_negative() {
+    // abs(-1.0) = 1.0
+    let neg_one = float64_from_bits(0xBFF0000000000000); // -1.0
+    let result = abs_float64(neg_one);
+    assert(float64_to_bits(result) == 0x3FF0000000000000); // 1.0
+
+    // abs(-3.14) = 3.14
+    let neg_pi = float64_from_bits(0xC0091EB851EB851F); // ~-3.14
+    let result2 = abs_float64(neg_pi);
+    assert(float64_to_bits(result2) == 0x40091EB851EB851F); // ~3.14
+}
+
+#[test]
+fn test_float64_abs_zero() {
+    // abs(+0) = +0
+    let pos_zero = float64_zero(0);
+    let result = abs_float64(pos_zero);
+    assert(float64_is_zero(result));
+    assert(result.sign == 0);
+
+    // abs(-0) = +0
+    let neg_zero = float64_zero(1);
+    let result2 = abs_float64(neg_zero);
+    assert(float64_is_zero(result2));
+    assert(result2.sign == 0);
+}
+
+#[test]
+fn test_float64_abs_infinity() {
+    // abs(+Inf) = +Inf
+    let pos_inf = float64_infinity(0);
+    let result = abs_float64(pos_inf);
+    assert(float64_is_infinity(result));
+    assert(result.sign == 0);
+
+    // abs(-Inf) = +Inf
+    let neg_inf = float64_infinity(1);
+    let result2 = abs_float64(neg_inf);
+    assert(float64_is_infinity(result2));
+    assert(result2.sign == 0);
+}
+
+#[test]
+fn test_float64_abs_nan() {
+    // abs(NaN) = NaN (with sign bit cleared)
+    let nan = float64_nan();
+    let result = abs_float64(nan);
+    assert(float64_is_nan(result));
+    assert(result.sign == 0);
 }

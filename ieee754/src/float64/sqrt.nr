@@ -111,10 +111,8 @@ pub fn sqrt_float64(a: IEEE754Float64) -> IEEE754Float64 {
     // Process up to 112 bits of input, 2 at a time (56 iterations)
     for i in 0..56 {
         // Shift remainder left by 2
-        remainder = U128 {
-            high: (remainder.high << 2) | (remainder.low >> 62),
-            low: remainder.low << 2,
-        };
+        remainder =
+            U128 { high: (remainder.high << 2) | (remainder.low >> 62), low: remainder.low << 2 };
 
         // Add next two bits from radicand
         // bit position: 110 - 2*i for the pair (starts at bits 110-111, ends at 0-1)
