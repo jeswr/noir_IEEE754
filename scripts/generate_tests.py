@@ -25,6 +25,7 @@ Usage:
 import argparse
 import math
 import os
+import random
 import re
 import struct
 import urllib.request
@@ -99,9 +100,10 @@ def generate_synthetic_f64_tests() -> list['TestCase']:
     - Hamming distance edge cases
     - Sticky bit calculations
     - Division trailing zeros
+    
+    Note: Uses a fixed seed (42) for reproducible/deterministic test generation.
     """
-    import random
-    random.seed(42)  # Reproducible tests
+    random.seed(42)  # Reproducible tests - ensures deterministic test generation
     
     tests = []
     
