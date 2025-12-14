@@ -188,5 +188,43 @@
         "brillig_opcodes": 34
       }
     }
+  },
+  {
+    "timestamp": "2025-12-14T17:39:57.988141",
+    "git_commit": "e84cdf43",
+    "benchmarks": {
+      "add_float32": {
+        "acir_opcodes": 610,
+        "brillig_opcodes": 34
+      },
+      "mul_float32": {
+        "acir_opcodes": 1051,
+        "brillig_opcodes": 34
+      },
+      "sub_float32": {
+        "acir_opcodes": 611,
+        "brillig_opcodes": 34
+      },
+      "div_float32": {
+        "acir_opcodes": 957,
+        "brillig_opcodes": 34
+      },
+      "add_float64": {
+        "acir_opcodes": 714,
+        "brillig_opcodes": 34
+      },
+      "mul_float64": {
+        "acir_opcodes": 1779,
+        "brillig_opcodes": 34
+      },
+      "sub_float64": {
+        "acir_opcodes": 715,
+        "brillig_opcodes": 34
+      },
+      "div_float64": {
+        "acir_opcodes": 4587,
+        "brillig_opcodes": 34
+      }
+    }
   }
 ]
