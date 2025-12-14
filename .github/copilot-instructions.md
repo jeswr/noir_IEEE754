@@ -52,26 +52,22 @@ if shifted_out != 0 { result | 1 } else { result }
 ## Developer Commands
 
 ```bash
-# Generate test packages (recommended for CI - tests in separate packages)
+# Run test packages locally (handles workspace setup automatically)
+python3 scripts/run_tests.py --list              # List available packages
+python3 scripts/run_tests.py add_shift           # Run packages matching 'add_shift'
+python3 scripts/run_tests.py corner_rounding     # Run a specific test suite
+python3 scripts/run_tests.py --generate          # Regenerate test packages first
+python3 scripts/run_tests.py --generate --operation add  # Generate only addition tests
+
+# Generate test packages (for CI or manual use)
 python3 scripts/generate_tests.py --all --packages
 
-# Generate tests for specific operations
-python3 scripts/generate_tests.py --all --packages --operation add
-python3 scripts/generate_tests.py --all --packages --operation mul
-python3 scripts/generate_tests.py --all --packages --operation div
-
-# Run tests from a specific package (from project root)
-nargo test --package ieee754_test_add_shift chunk_0000::
-
-# Run single test
-nargo test --package ieee754_test_add_shift chunk_0000::test_f32_add_0
-
 # Run manual unit tests only (from project root)
-nargo test --package ieee754 test_float32
-nargo test --package ieee754 test_float64
+nargo test --package ieee754_unit_tests test_float32
+nargo test --package ieee754_unit_tests test_float64
 ```
 
-> ⚠️ **Warning**: Running `nargo test` without filters executes ~18k tests and takes several hours. Always run individual chunks or packages during development.
+> ⚠️ **Warning**: Running all ~40k tests takes several hours. Use `run_tests.py` with filters during development.
 
 ## Test File Format (`.fptest`)
 ```
