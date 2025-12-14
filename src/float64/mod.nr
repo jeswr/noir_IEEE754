@@ -14,8 +14,8 @@ pub use helpers::{
 };
 
 pub use add::add_float64;
-pub use mul::mul_float64;
 pub use div::div_float64;
+pub use mul::mul_float64;
 
 // Subtraction is implemented as a + (-b)
 use crate::types::IEEE754Float64;
