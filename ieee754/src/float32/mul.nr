@@ -27,7 +27,7 @@ pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     // Get mantissas and normalize denormals
     // For denormals, we need to normalize them to have the implicit bit at position 23
     // and adjust the exponent accordingly
-    
+
     // Count leading zeros for denormal normalization (23-bit mantissa field)
     // Goal: find shift amount to put highest set bit at position 23 (implicit bit position)
     // This equals (23 - highest_bit_position) = leading_zeros_from_bit22 + 1
@@ -36,24 +36,52 @@ pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     if a_is_denormal & (a_mant_raw != 0) {
         let mut v = a_mant_raw;
         // Binary search for leading zeros relative to bit 22
-        if (v & 0x7FF800) == 0 { a_lz = a_lz + 12; v = v << 12; }  // bits 11-22
-        if (v & 0x7E0000) == 0 { a_lz = a_lz + 6; v = v << 6; }    // bits 17-22
-        if (v & 0x700000) == 0 { a_lz = a_lz + 3; v = v << 3; }    // bits 20-22
-        if (v & 0x600000) == 0 { a_lz = a_lz + 2; v = v << 2; }    // bits 21-22
-        if (v & 0x400000) == 0 { a_lz = a_lz + 1; }                 // bit 22
+        if (v & 0x7FF800) == 0 {
+            a_lz = a_lz + 12;
+            v = v << 12;
+        } // bits 11-22
+        if (v & 0x7E0000) == 0 {
+            a_lz = a_lz + 6;
+            v = v << 6;
+        } // bits 17-22
+        if (v & 0x700000) == 0 {
+            a_lz = a_lz + 3;
+            v = v << 3;
+        } // bits 20-22
+        if (v & 0x600000) == 0 {
+            a_lz = a_lz + 2;
+            v = v << 2;
+        } // bits 21-22
+        if (v & 0x400000) == 0 {
+            a_lz = a_lz + 1;
+        } // bit 22
         // Add 1 to get shift to position 23
         a_lz = a_lz + 1;
     }
-    
+
     let b_mant_raw: u64 = b.mantissa as u64;
     let mut b_lz: i64 = 0;
     if b_is_denormal & (b_mant_raw != 0) {
         let mut v = b_mant_raw;
-        if (v & 0x7FF800) == 0 { b_lz = b_lz + 12; v = v << 12; }
-        if (v & 0x7E0000) == 0 { b_lz = b_lz + 6; v = v << 6; }
-        if (v & 0x700000) == 0 { b_lz = b_lz + 3; v = v << 3; }
-        if (v & 0x600000) == 0 { b_lz = b_lz + 2; v = v << 2; }
-        if (v & 0x400000) == 0 { b_lz = b_lz + 1; }
+        if (v & 0x7FF800) == 0 {
+            b_lz = b_lz + 12;
+            v = v << 12;
+        }
+        if (v & 0x7E0000) == 0 {
+            b_lz = b_lz + 6;
+            v = v << 6;
+        }
+        if (v & 0x700000) == 0 {
+            b_lz = b_lz + 3;
+            v = v << 3;
+        }
+        if (v & 0x600000) == 0 {
+            b_lz = b_lz + 2;
+            v = v << 2;
+        }
+        if (v & 0x400000) == 0 {
+            b_lz = b_lz + 1;
+        }
         b_lz = b_lz + 1;
     }
 
