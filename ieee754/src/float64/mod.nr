@@ -6,6 +6,7 @@ pub(crate) mod helpers;
 pub(crate) mod add;
 pub(crate) mod mul;
 pub(crate) mod div;
+pub(crate) mod cmp;
 
 // Re-export all public functions
 pub use helpers::{
@@ -16,6 +17,7 @@ pub use helpers::{
 pub use add::add_float64;
 pub use div::div_float64;
 pub use mul::mul_float64;
+pub use cmp::{float64_eq, float64_ne, float64_lt, float64_le, float64_gt, float64_ge, float64_unordered, float64_compare};
 
 // Subtraction is implemented as a + (-b)
 use crate::types::IEEE754Float64;

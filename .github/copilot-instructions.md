@@ -86,12 +86,19 @@ b32+ =0 +1.000000P+0 +1.000000P+0 -> +1.000000P+1
 | Subtraction (-) | ✅ `sub_float32` | ✅ `sub_float64` | `--operation sub` |
 | Multiplication (*) | ✅ `mul_float32` | ✅ `mul_float64` | `--operation mul` |
 | Division (/) | ✅ `div_float32` | ✅ `div_float64` | `--operation div` |
+| Equal (==) | ✅ `float32_eq` | ✅ `float64_eq` | - |
+| Not Equal (!=) | ✅ `float32_ne` | ✅ `float64_ne` | - |
+| Less Than (<) | ✅ `float32_lt` | ✅ `float64_lt` | - |
+| Less Than or Equal (<=) | ✅ `float32_le` | ✅ `float64_le` | - |
+| Greater Than (>) | ✅ `float32_gt` | ✅ `float64_gt` | - |
+| Greater Than or Equal (>=) | ✅ `float32_ge` | ✅ `float64_ge` | - |
+| Unordered | ✅ `float32_unordered` | ✅ `float64_unordered` | - |
+| Total Order Compare | ✅ `float32_compare` | ✅ `float64_compare` | - |
 
 ## Future Extensions
 
 1. **Rounding modes**: Add parameter for `>` (toward +∞), `<` (toward -∞), `0` (toward zero)
-2. **Comparison operations**: Less than, equal, greater than
-3. **Square root**: `sqrt_float32`/`sqrt_float64`
+2. **Square root**: `sqrt_float32`/`sqrt_float64`
 
 ## Critical Files
 

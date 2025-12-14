@@ -12,6 +12,7 @@ IEEE 754 compliant floating-point arithmetic library for [Noir](https://noir-lan
 > **Test Coverage Limitations**: The following IEEE 754 test cases are skipped:
 > - **Non-default rounding modes**: Only "round to nearest, ties to even" (`=0`) is supported. Tests using round toward +∞ (`>`), -∞ (`<`), zero (`0`), or nearest away (`=^`) are skipped.
 > - **Non-binary operations**: FMA (`*+`), square root (`V`), and remainder (`%`) operations are not implemented.
+> - **Comparison operations**: Not tested with the IBM FPgen suite (only unit tests).
 > - **Known bad tests in IBM FPgen suite**: The test `b32/ =0 +1.2CEE1BP-64 +1.50EFBDP-30` from `Divide-Divide-By-Zero-Exception.fptest` is skipped due to an incorrect expected result in the test suite.
 > - **Underflow edge cases**: Tests where operands underflow to zero during conversion are skipped.
 
@@ -35,6 +36,7 @@ This library provides IEEE 754 standard floating-point operations in Noir, enabl
 | Subtraction | ✅     | ✅      |
 | Multiplication | ✅  | ✅      |
 | Division | ✅       | ✅      |
+| Comparison (eq, ne, lt, le, gt, ge) | ✅ | ✅ |
 
 ## Installation
 
@@ -55,7 +57,10 @@ use ieee754::float::{
     add_float32, add_float64,
     sub_float32, sub_float64,
     mul_float32, mul_float64,
-    div_float32, div_float64
+    div_float32, div_float64,
+    // Comparison operations
+    float32_eq, float32_ne, float32_lt, float32_le, float32_gt, float32_ge,
+    float64_eq, float64_ne, float64_lt, float64_le, float64_gt, float64_ge
 };
 
 fn main() {
@@ -91,6 +96,16 @@ float32_nan()           // Returns NaN
 float32_infinity(sign)  // Returns ±Infinity
 float32_zero(sign)      // Returns ±0
 
+// Comparison functions (IEEE 754 compliant)
+float32_eq(a, b)        // a == b (NaN != NaN, +0 == -0)
+float32_ne(a, b)        // a != b
+float32_lt(a, b)        // a < b (false if either is NaN)
+float32_le(a, b)        // a <= b (false if either is NaN)
+float32_gt(a, b)        // a > b (false if either is NaN)
+float32_ge(a, b)        // a >= b (false if either is NaN)
+float32_unordered(a, b) // true if either is NaN
+float32_compare(a, b)   // -1, 0, or 1 (total ordering including NaN)
+
 // Same functions available for float64 with float64_ prefix
 ```
 
@@ -101,6 +116,7 @@ float32_zero(sign)      // Returns ±0
 The library implements IEEE 754 arithmetic for both float32 and float64 with full support for:
 
 - ✅ **All basic operations**: Addition, subtraction, multiplication, division
+- ✅ **Comparison operations**: eq, ne, lt, le, gt, ge, unordered, compare
 - ✅ **Normalized numbers**: Standard floating-point values
 - ✅ **Denormalized (subnormal) numbers**: Gradual underflow handling
 - ✅ **Special values**: ±Zero, ±Infinity, NaN (quiet and signaling)
@@ -111,7 +127,7 @@ The library implements IEEE 754 arithmetic for both float32 and float64 with ful
 
 1. **Support Multiple Rounding Modes**: Round toward +∞, -∞, zero
 2. **Optimize Performance**: Reduce constraint count for ZK circuits
-3. **Add comparison operations**: Less than, equal, greater than
+3. **Add square root operation**: `sqrt_float32`/`sqrt_float64`
 
 ## Contributing
 
