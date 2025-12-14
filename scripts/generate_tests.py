@@ -470,6 +470,13 @@ def generate_noir_test(test: TestCase, index: int, add_debug: bool = False, forc
         bits2 = to_bits(test.operand2)
         f1, f2 = from_bits(bits1), from_bits(bits2)
     
+    # Skip tests where an operand underflows to zero when it wasn't supposed to be zero
+    # The test file may expect a finite result, but IEEE float32 will give infinity/NaN
+    if not test.operand1.is_zero and f1 == 0:
+        return None  # operand1 underflowed to zero
+    if not test.operand2.is_zero and f2 == 0:
+        return None  # operand2 underflowed to zero (division by zero)
+    
     # Compute expected result using IEEE arithmetic
     # This ensures the test verifies IEEE 754 compliance, not the test file's precision
     result_is_nan = False
