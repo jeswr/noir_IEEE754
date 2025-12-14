@@ -90,6 +90,282 @@ KNOWN_BAD_TESTS = {
 }
 
 
+def generate_synthetic_f64_tests() -> list['TestCase']:
+    """Generate synthetic float64 test cases for corner cases.
+    
+    These tests cover the same categories as the IBM FPgen b32 tests but for f64:
+    - Corner rounding (denormal * denormal -> denormal/zero)
+    - Underflow transitions
+    - Hamming distance edge cases
+    - Sticky bit calculations
+    - Division trailing zeros
+    """
+    import random
+    random.seed(42)  # Reproducible tests
+    
+    tests = []
+    
+    # Float64 constants
+    F64_BIAS = 1023
+    F64_MIN_EXP = -1022  # Minimum normal exponent
+    F64_MAX_EXP = 1023   # Maximum exponent
+    F64_MANTISSA_BITS = 52
+    F64_MIN_DENORM = 2**(-1074)  # Smallest positive denormal
+    F64_MIN_NORMAL = 2**(-1022)  # Smallest positive normal
+    
+    # Helper to create TestCase for f64
+    def make_f64_test(op: Operation, a_bits: int, b_bits: int, line_num: int, desc: str) -> 'TestCase':
+        a = float64_from_bits(a_bits)
+        b = float64_from_bits(b_bits)
+        
+        # Create FPValue from bits
+        def bits_to_fpvalue(bits: int) -> 'FPValue':
+            sign = (bits >> 63) & 1
+            exp = (bits >> 52) & 0x7FF
+            mant = bits & ((1 << 52) - 1)
+            
+            if exp == 0x7FF:
+                if mant == 0:
+                    return FPValue(sign=sign, significand="", exponent=0, is_inf=True)
+                else:
+                    return FPValue(sign=sign, significand="", exponent=0, is_nan=True)
+            elif exp == 0:
+                if mant == 0:
+                    return FPValue(sign=sign, significand="", exponent=0, is_zero=True)
+                else:
+                    # Denormal
+                    return FPValue(sign=sign, significand=f"0{mant:013X}", exponent=-1022)
+            else:
+                # Normal
+                return FPValue(sign=sign, significand=f"1{mant:013X}", exponent=exp - F64_BIAS)
+        
+        op1 = bits_to_fpvalue(a_bits)
+        op2 = bits_to_fpvalue(b_bits)
+        
+        # Compute expected result
+        result_float = 0.0
+        if op == Operation.ADD:
+            result_float = a + b
+        elif op == Operation.SUBTRACT:
+            result_float = a - b
+        elif op == Operation.MULTIPLY:
+            result_float = a * b
+        elif op == Operation.DIVIDE:
+            if b != 0:
+                result_float = a / b
+        
+        result_bits = float64_to_bits(result_float)
+        result_val = bits_to_fpvalue(result_bits)
+        
+        return TestCase(
+            precision=Precision.BINARY64,
+            operation=op,
+            rounding=RoundingMode.NEAREST_EVEN,
+            operand1=op1,
+            operand2=op2,
+            operand3=None,
+            result=result_val,
+            exception_flags="",
+            line_number=line_num,
+            raw_line=f"synthetic_f64 {desc}"
+        )
+    
+    line_num = 0
+    
+    # ========== Corner Rounding Tests (like b32 Corner-Rounding.fptest) ==========
+    # These test denormal * denormal -> zero/tiny denormal transitions
+    
+    # Smallest denormals multiplied
+    for i in range(20):
+        # Very small denormals that multiply to zero or smallest denormal
+        a_mant = random.randint(1, 0xFFFF)  # Small mantissa
+        b_mant = random.randint(1, 0xFFFF)
+        a_bits = a_mant  # Denormal (exp=0)
+        b_bits = b_mant
+        if random.random() < 0.5:
+            a_bits |= (1 << 63)  # Negative
+        if random.random() < 0.5:
+            b_bits |= (1 << 63)
+        tests.append(make_f64_test(Operation.MULTIPLY, a_bits, b_bits, line_num, f"corner_mul_denorm_{i}"))
+        line_num += 1
+    
+    # Division with denormals
+    for i in range(20):
+        # Denormal / large number -> zero
+        a_mant = random.randint(1, 0xFFFFFFFFFFF)
+        a_bits = a_mant  # Denormal
+        # Large divisor
+        b_exp = random.randint(900, 1023)
+        b_mant = random.randint(0, (1 << 52) - 1)
+        b_bits = (b_exp << 52) | b_mant
+        if random.random() < 0.5:
+            a_bits |= (1 << 63)
+        if random.random() < 0.5:
+            b_bits |= (1 << 63)
+        tests.append(make_f64_test(Operation.DIVIDE, a_bits, b_bits, line_num, f"corner_div_denorm_{i}"))
+        line_num += 1
+    
+    # ========== Underflow Tests ==========
+    # Numbers that underflow from normal to denormal
+    for i in range(30):
+        # Small normal * small normal -> denormal
+        a_exp = random.randint(1, 50)  # Very small normal exponent
+        b_exp = random.randint(1, 50)
+        a_mant = random.randint(0, (1 << 52) - 1)
+        b_mant = random.randint(0, (1 << 52) - 1)
+        a_bits = (a_exp << 52) | a_mant
+        b_bits = (b_exp << 52) | b_mant
+        if random.random() < 0.5:
+            a_bits |= (1 << 63)
+        if random.random() < 0.5:
+            b_bits |= (1 << 63)
+        tests.append(make_f64_test(Operation.MULTIPLY, a_bits, b_bits, line_num, f"underflow_mul_{i}"))
+        line_num += 1
+    
+    # Division underflow
+    for i in range(20):
+        # Small normal / large normal -> denormal
+        a_exp = random.randint(1, 100)
+        b_exp = random.randint(1500, 2046)
+        a_mant = random.randint(0, (1 << 52) - 1)
+        b_mant = random.randint(0, (1 << 52) - 1)
+        a_bits = (a_exp << 52) | a_mant
+        b_bits = (b_exp << 52) | b_mant
+        if random.random() < 0.5:
+            a_bits |= (1 << 63)
+        if random.random() < 0.5:
+            b_bits |= (1 << 63)
+        tests.append(make_f64_test(Operation.DIVIDE, a_bits, b_bits, line_num, f"underflow_div_{i}"))
+        line_num += 1
+    
+    # ========== Hamming Distance Tests ==========
+    # Adjacent values that differ by 1 ULP
+    for i in range(30):
+        # Create a value and add/subtract 1 ULP
+        exp = random.randint(1, 2046)
+        mant = random.randint(1, (1 << 52) - 2)
+        base_bits = (exp << 52) | mant
+        ulp_bits = base_bits + 1  # 1 ULP higher
+        
+        base = float64_from_bits(base_bits)
+        ulp = float64_from_bits(ulp_bits)
+        diff = ulp - base  # This is 1 ULP
+        
+        # Test addition of values that result in 1 ULP difference
+        a_bits = float64_to_bits(base)
+        b_bits = float64_to_bits(diff)
+        tests.append(make_f64_test(Operation.ADD, a_bits, b_bits, line_num, f"hamming_add_{i}"))
+        line_num += 1
+        
+        # Subtraction test
+        tests.append(make_f64_test(Operation.SUBTRACT, float64_to_bits(ulp), b_bits, line_num, f"hamming_sub_{i}"))
+        line_num += 1
+    
+    # ========== Sticky Bit Tests ==========
+    # Values where sticky bit affects rounding
+    for i in range(30):
+        # Create values where intermediate result has sticky bits
+        exp_a = random.randint(500, 1500)
+        exp_b = random.randint(500, 1500)
+        mant_a = random.randint((1 << 51), (1 << 52) - 1)  # Ensure many bits set
+        mant_b = random.randint((1 << 51), (1 << 52) - 1)
+        a_bits = (exp_a << 52) | mant_a
+        b_bits = (exp_b << 52) | mant_b
+        if random.random() < 0.5:
+            a_bits |= (1 << 63)
+        if random.random() < 0.5:
+            b_bits |= (1 << 63)
+        tests.append(make_f64_test(Operation.MULTIPLY, a_bits, b_bits, line_num, f"sticky_mul_{i}"))
+        line_num += 1
+    
+    # ========== Division Trailing Zeros Tests ==========
+    # Division that results in exact values (no rounding needed)
+    for i in range(20):
+        # Powers of 2 division
+        exp_a = random.randint(100, 1900)
+        exp_b = random.randint(100, 1900)
+        a_bits = exp_a << 52  # 1.0 * 2^(exp-1023)
+        b_bits = exp_b << 52
+        if random.random() < 0.5:
+            a_bits |= (1 << 63)
+        if random.random() < 0.5:
+            b_bits |= (1 << 63)
+        tests.append(make_f64_test(Operation.DIVIDE, a_bits, b_bits, line_num, f"div_pow2_{i}"))
+        line_num += 1
+    
+    # ========== Rounding Boundary Tests ==========
+    # Values exactly at rounding boundaries
+    for i in range(30):
+        # Create values that are exactly at a rounding boundary (guard bit = 1, round = 0, sticky = 0)
+        exp = random.randint(100, 1900)
+        # Mantissa with specific bit pattern for rounding
+        mant = random.randint(0, (1 << 48) - 1) << 4  # Clear low 4 bits
+        mant |= 0x8  # Set guard bit exactly at midpoint
+        a_bits = (exp << 52) | mant
+        b_bits = (1023 << 52)  # 1.0
+        tests.append(make_f64_test(Operation.MULTIPLY, a_bits, b_bits, line_num, f"round_boundary_{i}"))
+        line_num += 1
+    
+    # ========== Overflow Boundary Tests ==========
+    for i in range(20):
+        # Large values that multiply to near-overflow
+        exp_a = random.randint(1800, 2046)
+        exp_b = random.randint(1, 300)
+        mant_a = random.randint(0, (1 << 52) - 1)
+        mant_b = random.randint(0, (1 << 52) - 1)
+        a_bits = (exp_a << 52) | mant_a
+        b_bits = (exp_b << 52) | mant_b
+        tests.append(make_f64_test(Operation.MULTIPLY, a_bits, b_bits, line_num, f"overflow_mul_{i}"))
+        line_num += 1
+    
+    # ========== Denormal Input Normalization Tests ==========
+    # These specifically test the denormal normalization path (like the float32 fixes)
+    for i in range(30):
+        # Denormal with specific leading bit positions
+        leading_pos = random.randint(0, 51)
+        mant = (1 << leading_pos) | random.randint(0, (1 << leading_pos) - 1)
+        a_bits = mant  # Denormal
+        
+        # Multiply by a normal value
+        b_exp = random.randint(1, 100)
+        b_mant = random.randint(0, (1 << 52) - 1)
+        b_bits = (b_exp << 52) | b_mant
+        if random.random() < 0.5:
+            a_bits |= (1 << 63)
+        if random.random() < 0.5:
+            b_bits |= (1 << 63)
+        tests.append(make_f64_test(Operation.MULTIPLY, a_bits, b_bits, line_num, f"denorm_normalize_mul_{i}"))
+        line_num += 1
+        
+        # Division with denormal dividend
+        tests.append(make_f64_test(Operation.DIVIDE, a_bits, b_bits, line_num, f"denorm_normalize_div_{i}"))
+        line_num += 1
+    
+    # ========== Specific Known Problematic Patterns ==========
+    # These are patterns that were problematic for float32 and should be tested for float64
+    
+    # Denormal result that rounds up to normal
+    for i in range(10):
+        # Just below normal threshold
+        a_bits = 0x000FFFFFFFFFFFFF  # Largest denormal
+        b_exp = random.randint(1020, 1026)
+        b_mant = random.randint(0, (1 << 52) - 1)
+        b_bits = (b_exp << 52) | b_mant
+        tests.append(make_f64_test(Operation.MULTIPLY, a_bits, b_bits, line_num, f"denorm_to_normal_{i}"))
+        line_num += 1
+    
+    # Very small result that might incorrectly round to zero
+    for i in range(10):
+        a_bits = 0x0000000000000001  # Smallest denormal
+        b_exp = random.randint(1020, 1026)
+        b_bits = b_exp << 52
+        tests.append(make_f64_test(Operation.MULTIPLY, a_bits, b_bits, line_num, f"tiny_mul_{i}"))
+        line_num += 1
+    
+    print(f"Generated {len(tests)} synthetic f64 test cases")
+    return tests
+
+
 class Precision(Enum):
     BINARY32 = "b32"
     BINARY64 = "b64"
@@ -748,14 +1024,23 @@ def generate_noir_packages(
         # Generate all test code
         if generate_both:
             # Generate both f32 tests (index 0..n-1) and f64 tests (index n..2n-1)
+            # For native f64 tests (like synthetic tests), only generate once (in the f64 pass)
             f32_tests = [
                 code for i, test in enumerate(tests)
-                if (code := generate_noir_test(test, i, add_debug, force_f64=False))
+                if test.precision == Precision.BINARY32 and (code := generate_noir_test(test, i, add_debug, force_f64=False))
             ]
-            f64_tests = [
-                code for i, test in enumerate(tests)
-                if (code := generate_noir_test(test, len(tests) + i, add_debug, force_f64=True))
-            ]
+            # For native f64 tests, don't set force_f64 (they're already f64)
+            # For f32 tests, convert to f64
+            f64_tests = []
+            for i, test in enumerate(tests):
+                if test.precision == Precision.BINARY64:
+                    # Native f64 test - generate directly
+                    code = generate_noir_test(test, len(tests) + i, add_debug, force_f64=False)
+                else:
+                    # f32 test - convert to f64
+                    code = generate_noir_test(test, len(tests) + i, add_debug, force_f64=True)
+                if code:
+                    f64_tests.append(code)
             all_test_code = f32_tests + f64_tests
         else:
             all_test_code = [
@@ -858,14 +1143,23 @@ def generate_noir_file_per_source(
         # Generate all test code
         if generate_both:
             # Generate both f32 tests (index 0..n-1) and f64 tests (index n..2n-1)
+            # For native f64 tests (like synthetic tests), only generate once (in the f64 pass)
             f32_tests = [
                 code for i, test in enumerate(tests)
-                if (code := generate_noir_test(test, i, add_debug, force_f64=False))
+                if test.precision == Precision.BINARY32 and (code := generate_noir_test(test, i, add_debug, force_f64=False))
             ]
-            f64_tests = [
-                code for i, test in enumerate(tests)
-                if (code := generate_noir_test(test, len(tests) + i, add_debug, force_f64=True))
-            ]
+            # For native f64 tests, don't set force_f64 (they're already f64)
+            # For f32 tests, convert to f64
+            f64_tests = []
+            for i, test in enumerate(tests):
+                if test.precision == Precision.BINARY64:
+                    # Native f64 test - generate directly
+                    code = generate_noir_test(test, len(tests) + i, add_debug, force_f64=False)
+                else:
+                    # f32 test - convert to f64
+                    code = generate_noir_test(test, len(tests) + i, add_debug, force_f64=True)
+                if code:
+                    f64_tests.append(code)
             all_test_code = f32_tests + f64_tests
         else:
             all_test_code = [
@@ -1042,6 +1336,11 @@ Examples:
         help='Generate f64 tests from f32 test cases (converts operands to f64 and computes results)'
     )
     parser.add_argument(
+        '--synthetic-f64',
+        action='store_true',
+        help='Generate synthetic f64 corner case tests (denormals, rounding boundaries, etc.)'
+    )
+    parser.add_argument(
         '--max-tests',
         type=int,
         default=None,
@@ -1168,6 +1467,13 @@ Examples:
             if filtered:
                 tests_by_file[source_name] = filtered
                 print(f"  {len(tests)} parsed, {len(filtered)} after filtering")
+        
+        # Add synthetic f64 tests if requested
+        if args.synthetic_f64:
+            synthetic_tests = generate_synthetic_f64_tests()
+            if synthetic_tests:
+                tests_by_file["Synthetic-F64-Corner-Cases.synthetic"] = synthetic_tests
+                total_parsed += len(synthetic_tests)
         
         print(f"\nParsed {total_parsed} total test cases")
         

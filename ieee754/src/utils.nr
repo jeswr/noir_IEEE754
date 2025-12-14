@@ -2,6 +2,8 @@
 // Shared Utility Functions for IEEE 754 Operations
 // ============================================================================
 
+use std::ops::WrappingAdd;
+
 // Helper to shift right with sticky bit preservation for u64
 pub fn shift_right_sticky_u64(value: u64, shift: u64) -> u64 {
     if shift == 0 {
@@ -38,20 +40,42 @@ pub fn mul_u64_to_u128(a: u64, b: u64) -> U128 {
     let b_lo = b & 0xFFFFFFFF;
     let b_hi = b >> 32;
 
-    // Partial products
-    let p0 = a_lo * b_lo;
-    let p1 = a_lo * b_hi;
-    let p2 = a_hi * b_lo;
-    let p3 = a_hi * b_hi;
+    // Partial products (all fit in 64 bits since 32-bit * 32-bit = 64-bit max)
+    let p0 = a_lo * b_lo; // a_lo * b_lo
+    let p1 = a_lo * b_hi; // a_lo * b_hi
+    let p2 = a_hi * b_lo; // a_hi * b_lo
+    let p3 = a_hi * b_hi; // a_hi * b_hi
 
-    // Sum partial products with carry propagation
-    let mid = p1 + p2;
-    let mid_carry: u64 = if mid < p1 { 1 } else { 0 };
+    // The result is: p0 + (p1 << 32) + (p2 << 32) + (p3 << 64)
+    // = p0 + ((p1 + p2) << 32) + (p3 << 64)
+    //
+    // Split into low 64 bits and high 64 bits:
+    // low  = (p0) + ((p1 + p2) << 32) mod 2^64
+    // high = p3 + ((p1 + p2) >> 32) + carry_from_low
 
-    let low = p0 + (mid << 32);
+    // Sum p1 + p2 (can be up to 65 bits, so we need to track carry)
+    let mid_sum = p1 + p2;
+    let mid_carry: u64 = if mid_sum < p1 { 1 } else { 0 }; // This carry goes to bit 96
+
+    // Now compute low = p0 + (mid_sum << 32)
+    // This can overflow, so we do it in parts:
+    // low = p0[31:0] + p0[63:32]*2^32 + mid_sum[31:0]*2^32 + mid_sum[63:32]*2^64
+    // The mid_sum[63:32]*2^64 part goes to high
+
+    // low[31:0] = p0[31:0] (no overflow possible in low 32 bits from mid)
+    // low[63:32] = p0[63:32] + mid_sum[31:0] + possible carry from low[31:0]
+
+    // Actually, simpler approach: use wrapping semantics by detecting overflow
+    // low = p0 + (mid_sum & 0xFFFFFFFF) << 32
+    let mid_lo_shifted = (mid_sum & 0xFFFFFFFF) << 32;
+
+    // Add p0 + mid_lo_shifted using wrapping arithmetic
+    // To detect carry: if result < p0 (or result < mid_lo_shifted), there was overflow
+    let low = p0.wrapping_add(mid_lo_shifted);
     let low_carry: u64 = if low < p0 { 1 } else { 0 };
 
-    let high = p3 + (mid >> 32) + (mid_carry << 32) + low_carry;
+    // high = p3 + (mid_sum >> 32) + (mid_carry << 32) + low_carry
+    let high = p3 + (mid_sum >> 32) + (mid_carry << 32) + low_carry;
 
     U128 { high, low }
 }
