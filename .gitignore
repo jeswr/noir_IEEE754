@@ -4,7 +4,10 @@
 # Noir build outputs
 target/
 
-src/ieee754_tests/
+# IEEE 754 generated tests (but keep the stub mod.nr)
+src/ieee754_tests/*
+!src/ieee754_tests/mod.nr
+
 scripts/__pycache__/
 
 # OS files
