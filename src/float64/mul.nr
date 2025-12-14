@@ -1,0 +1,173 @@
+// ============================================================================
+// IEEE 754 Float64 Multiplication
+// ============================================================================
+
+use crate::float64::helpers::{
+    float64_infinity, float64_is_denormal, float64_is_infinity, float64_is_nan, float64_is_zero,
+    float64_nan, float64_zero,
+};
+use crate::types::{FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64};
+use crate::utils::{mul_u64_to_u128, shift_right_sticky_u128, shift_right_sticky_u64};
+
+// IEEE 754 compliant multiplication for 64-bit floats
+pub fn mul_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
+    // Determine special cases
+    let a_is_nan = float64_is_nan(a);
+    let b_is_nan = float64_is_nan(b);
+    let a_is_inf = float64_is_infinity(a);
+    let b_is_inf = float64_is_infinity(b);
+    let a_is_zero = float64_is_zero(a);
+    let b_is_zero = float64_is_zero(b);
+    let a_is_denormal = float64_is_denormal(a);
+    let b_is_denormal = float64_is_denormal(b);
+
+    // Result sign is XOR of input signs
+    let result_sign: u1 = a.sign ^ b.sign;
+
+    // Get effective mantissas with implicit bit (53 bits each)
+    let mant_a: u64 = if a_is_denormal {
+        a.mantissa
+    } else if a_is_zero {
+        0
+    } else {
+        a.mantissa | FLOAT64_IMPLICIT_BIT
+    };
+
+    let mant_b: u64 = if b_is_denormal {
+        b.mantissa
+    } else if b_is_zero {
+        0
+    } else {
+        b.mantissa | FLOAT64_IMPLICIT_BIT
+    };
+
+    // Get effective exponents (unbiased)
+    let exp_a_eff: i64 = if a_is_denormal {
+        1 - 1023
+    } else if a_is_zero {
+        0
+    } else {
+        (a.exponent as i64) - 1023
+    };
+
+    let exp_b_eff: i64 = if b_is_denormal {
+        1 - 1023
+    } else if b_is_zero {
+        0
+    } else {
+        (b.exponent as i64) - 1023
+    };
+
+    // Multiply mantissas (53-bit * 53-bit = 106-bit max)
+    // For two normalized numbers: 1.xxx * 1.yyy gives result in range [1, 4)
+    // The product will have the implicit bit at position 104 or 105
+    let product = mul_u64_to_u128(mant_a, mant_b);
+
+    // Check if product is zero
+    let result_is_zero = (product.high == 0) & (product.low == 0);
+
+    // Result exponent
+    let mut result_exp: i64 = exp_a_eff + exp_b_eff + 1023;
+
+    // For normalized * normalized:
+    // mant_a has implicit bit at position 52
+    // mant_b has implicit bit at position 52
+    // product has implicit bit at position 104 or 105 (105 if >= 2.0)
+
+    // Check if bit 105 is set (product >= 2.0)
+    // bit 105 in 128-bit = bit 41 of high part (105 - 64 = 41)
+    let bit_105_set = (product.high >> 41) & 1 == 1;
+
+    let mut result_mant: u64 = 0;
+    if !result_is_zero {
+        if bit_105_set {
+            // Product >= 2.0, need to shift extra and increase exponent
+            result_exp = result_exp + 1;
+            // Shift from position 105 to position 55 (52 + 3 guard bits)
+            // That's a shift of 105 - 55 = 50
+            result_mant = shift_right_sticky_u128(product, 50);
+        } else {
+            // Product in [1, 2), implicit bit at position 104
+            // Shift from position 104 to position 55
+            // That's a shift of 104 - 55 = 49
+            result_mant = shift_right_sticky_u128(product, 49);
+        }
+    }
+
+    // Round to nearest, ties to even
+    let guard_bits = result_mant & 0x7;
+    result_mant = result_mant >> 3;
+
+    let should_round_up = (guard_bits > 4) | ((guard_bits == 4) & ((result_mant & 1) == 1));
+    if should_round_up {
+        result_mant = result_mant + 1;
+        if result_mant >= (FLOAT64_IMPLICIT_BIT << 1) {
+            result_mant = result_mant >> 1;
+            result_exp = result_exp + 1;
+        }
+    }
+
+    // Handle underflow to denormal
+    let mut is_denormal_result = false;
+    if result_exp <= 0 {
+        let denorm_shift = 1 - result_exp;
+        if denorm_shift < 53 {
+            result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
+        } else {
+            result_mant = 0;
+        }
+        result_exp = 0;
+        is_denormal_result = true;
+    }
+
+    // Check for overflow to infinity
+    let overflows_to_inf = result_exp >= (FLOAT64_EXPONENT_MAX as i64);
+
+    // Remove implicit bit for final mantissa
+    let final_mantissa = if is_denormal_result {
+        result_mant & 0xFFFFFFFFFFFFF
+    } else {
+        result_mant & (FLOAT64_IMPLICIT_BIT - 1)
+    };
+
+    let normal_result =
+        IEEE754Float64 { sign: result_sign, exponent: result_exp as u16, mantissa: final_mantissa };
+
+    // Handle special cases
+    let mut result = normal_result;
+
+    // Zero result
+    if result_is_zero | (result_mant == 0) {
+        result = float64_zero(result_sign);
+    }
+
+    // Overflow to infinity
+    if overflows_to_inf {
+        result = float64_infinity(result_sign);
+    }
+
+    // Handle zero inputs
+    if a_is_zero | b_is_zero {
+        if a_is_inf | b_is_inf {
+            result = float64_nan();
+        } else {
+            result = float64_zero(result_sign);
+        }
+    }
+
+    // Handle infinity inputs
+    if (a_is_inf | b_is_inf) & !a_is_zero & !b_is_zero {
+        if a_is_nan | b_is_nan {
+            result = float64_nan();
+        } else {
+            result = float64_infinity(result_sign);
+        }
+    }
+
+    // Handle NaN inputs (highest priority)
+    if a_is_nan | b_is_nan {
+        result = float64_nan();
+    }
+
+    result
+}
