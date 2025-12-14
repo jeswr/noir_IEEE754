@@ -3,7 +3,6 @@ pub mod utils;
 pub mod float32;
 pub mod float64;
 pub mod float;
-mod ieee754_tests;
 
 // Re-export public API
 pub use crate::float::{
