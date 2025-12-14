@@ -1,0 +1,40 @@
+[
+  {
+    "timestamp": "2025-12-14T09:18:25.066467",
+    "git_commit": "eef80bd4",
+    "benchmarks": {
+      "add_float32": {
+        "acir_opcodes": 154,
+        "brillig_opcodes": 538
+      },
+      "mul_float32": {
+        "acir_opcodes": 122,
+        "brillig_opcodes": 450
+      },
+      "sub_float32": {
+        "acir_opcodes": 150,
+        "brillig_opcodes": 538
+      },
+      "div_float32": {
+        "acir_opcodes": 119,
+        "brillig_opcodes": 491
+      },
+      "add_float64": {
+        "acir_opcodes": 158,
+        "brillig_opcodes": 618
+      },
+      "mul_float64": {
+        "acir_opcodes": 126,
+        "brillig_opcodes": 517
+      },
+      "sub_float64": {
+        "acir_opcodes": 154,
+        "brillig_opcodes": 618
+      },
+      "div_float64": {
+        "acir_opcodes": 123,
+        "brillig_opcodes": 573
+      }
+    }
+  }
+]
