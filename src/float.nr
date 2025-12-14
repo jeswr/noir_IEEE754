@@ -164,8 +164,8 @@ fn shift_right_sticky_u64(value: u64, shift: u64) -> u64 {
     }
 }
 
-// Unconstrained hint for Float32 addition - computes the full result without constraints
-unconstrained fn add_float32_hint(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
+// IEEE 754 compliant addition for 32-bit floats
+pub fn add_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     let a_is_nan = float32_is_nan(a);
     let b_is_nan = float32_is_nan(b);
     let a_is_inf = float32_is_infinity(a);
@@ -357,78 +357,12 @@ unconstrained fn add_float32_hint(a: IEEE754Float32, b: IEEE754Float32) -> IEEE7
     result
 }
 
-// Verify a Float32 addition result by recomputing key properties
-fn verify_add_float32_result(a: IEEE754Float32, b: IEEE754Float32, result: IEEE754Float32) {
-    let a_is_nan = float32_is_nan(a);
-    let b_is_nan = float32_is_nan(b);
-    let a_is_inf = float32_is_infinity(a);
-    let b_is_inf = float32_is_infinity(b);
-    let a_is_zero = float32_is_zero(a);
-    let b_is_zero = float32_is_zero(b);
-    let result_is_nan = float32_is_nan(result);
-    let result_is_inf = float32_is_infinity(result);
-
-    // NaN propagation: NaN + anything = NaN
-    if a_is_nan | b_is_nan {
-        assert(result_is_nan);
-    }
-
-    // Inf + (-Inf) = NaN
-    if a_is_inf & b_is_inf & (a.sign != b.sign) {
-        assert(result_is_nan);
-    }
-
-    // Inf + finite = Inf (with same sign)
-    if a_is_inf & !b_is_nan & !b_is_inf {
-        assert(result_is_inf);
-        assert(result.sign == a.sign);
-    }
-    if b_is_inf & !a_is_nan & !a_is_inf {
-        assert(result_is_inf);
-        assert(result.sign == b.sign);
-    }
-
-    // Inf + Inf (same sign) = Inf
-    if a_is_inf & b_is_inf & (a.sign == b.sign) {
-        assert(result_is_inf);
-        assert(result.sign == a.sign);
-    }
-
-    // x + 0 = x (for finite x)
-    if b_is_zero & !a_is_nan & !a_is_inf & !a_is_zero {
-        assert(float32_to_bits(result) == float32_to_bits(a));
-    }
-    if a_is_zero & !b_is_nan & !b_is_inf & !b_is_zero {
-        assert(float32_to_bits(result) == float32_to_bits(b));
-    }
-
-    // Verify mantissa is in valid range for non-special results
-    if !result_is_nan & !result_is_inf {
-        assert(result.mantissa < FLOAT32_IMPLICIT_BIT);
-    }
-
-    // Verify exponent is in valid range
-    assert(result.exponent <= FLOAT32_EXPONENT_MAX);
-}
-
-// IEEE 754 compliant addition for 32-bit floats
-// Uses unconstrained hint for computation, then verifies key properties
-pub fn add_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
-    // Safety: The unconstrained hint computes the IEEE 754 compliant result,
-    // which is then verified by checking special case handling and range constraints.
-    let result = unsafe { add_float32_hint(a, b) };
-
-    verify_add_float32_result(a, b, result);
-
-    result
-}
-
 // ============================================================================
 // IEEE 754 Float64 Addition
 // ============================================================================
 
-// Unconstrained hint for Float64 addition
-unconstrained fn add_float64_hint(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
+// IEEE 754 compliant addition for 64-bit doubles
+pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     let a_is_nan = float64_is_nan(a);
     let b_is_nan = float64_is_nan(b);
     let a_is_inf = float64_is_infinity(a);
@@ -657,70 +591,6 @@ unconstrained fn add_float64_hint(a: IEEE754Float64, b: IEEE754Float64) -> IEEE7
     result
 }
 
-// Verify a Float64 addition result by recomputing key properties
-fn verify_add_float64_result(a: IEEE754Float64, b: IEEE754Float64, result: IEEE754Float64) {
-    let a_is_nan = float64_is_nan(a);
-    let b_is_nan = float64_is_nan(b);
-    let a_is_inf = float64_is_infinity(a);
-    let b_is_inf = float64_is_infinity(b);
-    let a_is_zero = float64_is_zero(a);
-    let b_is_zero = float64_is_zero(b);
-    let result_is_nan = float64_is_nan(result);
-    let result_is_inf = float64_is_infinity(result);
-
-    // NaN propagation
-    if a_is_nan | b_is_nan {
-        assert(result_is_nan);
-    }
-
-    // Inf + (-Inf) = NaN
-    if a_is_inf & b_is_inf & (a.sign != b.sign) {
-        assert(result_is_nan);
-    }
-
-    // Inf + finite = Inf (with same sign)
-    if a_is_inf & !b_is_nan & !b_is_inf {
-        assert(result_is_inf);
-        assert(result.sign == a.sign);
-    }
-    if b_is_inf & !a_is_nan & !a_is_inf {
-        assert(result_is_inf);
-        assert(result.sign == b.sign);
-    }
-
-    // Inf + Inf (same sign) = Inf
-    if a_is_inf & b_is_inf & (a.sign == b.sign) {
-        assert(result_is_inf);
-        assert(result.sign == a.sign);
-    }
-
-    // x + 0 = x (for finite x)
-    if b_is_zero & !a_is_nan & !a_is_inf & !a_is_zero {
-        assert(float64_to_bits(result) == float64_to_bits(a));
-    }
-    if a_is_zero & !b_is_nan & !b_is_inf & !b_is_zero {
-        assert(float64_to_bits(result) == float64_to_bits(b));
-    }
-
-    // Verify mantissa is in valid range
-    if !result_is_nan & !result_is_inf {
-        assert(result.mantissa < FLOAT64_IMPLICIT_BIT);
-    }
-
-    // Verify exponent is in valid range
-    assert(result.exponent <= FLOAT64_EXPONENT_MAX);
-}
-
-// IEEE 754 compliant addition for 64-bit doubles
-pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
-    // Safety: The unconstrained hint computes the IEEE 754 compliant result
-    let result = unsafe { add_float64_hint(a, b) };
-
-    verify_add_float64_result(a, b, result);
-
-    result
-}
-
 // ============================================================================
 // IEEE 754 Float32 Subtraction
 // ============================================================================
@@ -749,8 +619,8 @@ pub fn sub_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
 // IEEE 754 Float32 Multiplication
 // ============================================================================
 
-// Unconstrained hint for Float32 multiplication
-unconstrained fn mul_float32_hint(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
+// IEEE 754 compliant multiplication for 32-bit floats
+pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     // Determine special cases
     let a_is_nan = float32_is_nan(a);
     let b_is_nan = float32_is_nan(b);
@@ -912,69 +782,6 @@ unconstrained fn mul_float32_hint(a: IEEE754Float32, b: IEEE754Float32) -> IEEE7
     result
 }
 
-// Verify a Float32 multiplication result
-fn verify_mul_float32_result(a: IEEE754Float32, b: IEEE754Float32, result: IEEE754Float32) {
-    let a_is_nan = float32_is_nan(a);
-    let b_is_nan = float32_is_nan(b);
-    let a_is_inf = float32_is_infinity(a);
-    let b_is_inf = float32_is_infinity(b);
-    let a_is_zero = float32_is_zero(a);
-    let b_is_zero = float32_is_zero(b);
-    let result_is_nan = float32_is_nan(result);
-    let result_is_inf = float32_is_infinity(result);
-    let result_is_zero = float32_is_zero(result);
-    let result_sign = a.sign ^ b.sign;
-
-    // NaN propagation
-    if a_is_nan | b_is_nan {
-        assert(result_is_nan);
-    }
-
-    // 0 * inf = NaN
-    if (a_is_zero & b_is_inf) | (a_is_inf & b_is_zero) {
-        assert(result_is_nan);
-    }
-
-    // x * 0 = 0 (for finite x)
-    if !a_is_nan & !a_is_inf & b_is_zero {
-        assert(result_is_zero);
-    }
-    if a_is_zero & !b_is_nan & !b_is_inf {
-        assert(result_is_zero);
-    }
-
-    // x * inf = inf (for finite non-zero x)
-    if !a_is_nan & !a_is_zero & !a_is_inf & b_is_inf {
-        assert(result_is_inf);
-        assert(result.sign == result_sign);
-    }
-    if a_is_inf & !b_is_nan & !b_is_zero & !b_is_inf {
-        assert(result_is_inf);
-        assert(result.sign == result_sign);
-    }
-
-    // inf * inf = inf
-    if a_is_inf & b_is_inf {
-        assert(result_is_inf);
-    }
-
-    // Verify mantissa is in valid range
-    if !result_is_nan & !result_is_inf {
-        assert(result.mantissa < FLOAT32_IMPLICIT_BIT);
-    }
-
-    // Verify exponent is in valid range
-    assert(result.exponent <= FLOAT32_EXPONENT_MAX);
-}
-
-// IEEE 754 compliant multiplication for 32-bit floats
-pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
-    // Safety: mul_float32_hint computes the multiplication and the result is verified by verify_mul_float32_result
-    let result = unsafe { mul_float32_hint(a, b) };
-    verify_mul_float32_result(a, b, result);
-    result
-}
-
 // ============================================================================
 // IEEE 754 Float64 Multiplication
 // ============================================================================
@@ -1053,8 +860,8 @@ fn shift_right_sticky_u128(val: U128, shift: u64) -> u64 {
     }
 }
 
-// Unconstrained hint for Float64 multiplication
-unconstrained fn mul_float64_hint(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
+// IEEE 754 compliant multiplication for 64-bit floats
+pub fn mul_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     // Determine special cases
     let a_is_nan = float64_is_nan(a);
     let b_is_nan = float64_is_nan(b);
@@ -1216,75 +1023,12 @@ unconstrained fn mul_float64_hint(a: IEEE754Float64, b: IEEE754Float64) -> IEEE7
     result
 }
 
-// Verify a Float64 multiplication result
-fn verify_mul_float64_result(a: IEEE754Float64, b: IEEE754Float64, result: IEEE754Float64) {
-    let a_is_nan = float64_is_nan(a);
-    let b_is_nan = float64_is_nan(b);
-    let a_is_inf = float64_is_infinity(a);
-    let b_is_inf = float64_is_infinity(b);
-    let a_is_zero = float64_is_zero(a);
-    let b_is_zero = float64_is_zero(b);
-    let result_is_nan = float64_is_nan(result);
-    let result_is_inf = float64_is_infinity(result);
-    let result_is_zero = float64_is_zero(result);
-    let result_sign = a.sign ^ b.sign;
-
-    // NaN propagation
-    if a_is_nan | b_is_nan {
-        assert(result_is_nan);
-    }
-
-    // 0 * inf = NaN
-    if (a_is_zero & b_is_inf) | (a_is_inf & b_is_zero) {
-        assert(result_is_nan);
-    }
-
-    // x * 0 = 0 (for finite x)
-    if !a_is_nan & !a_is_inf & b_is_zero {
-        assert(result_is_zero);
-    }
-    if a_is_zero & !b_is_nan & !b_is_inf {
-        assert(result_is_zero);
-    }
-
-    // x * inf = inf (for finite non-zero x)
-    if !a_is_nan & !a_is_zero & !a_is_inf & b_is_inf {
-        assert(result_is_inf);
-        assert(result.sign == result_sign);
-    }
-    if a_is_inf & !b_is_nan & !b_is_zero & !b_is_inf {
-        assert(result_is_inf);
-        assert(result.sign == result_sign);
-    }
-
-    // inf * inf = inf
-    if a_is_inf & b_is_inf {
-        assert(result_is_inf);
-    }
-
-    // Verify mantissa is in valid range
-    if !result_is_nan & !result_is_inf {
-        assert(result.mantissa < FLOAT64_IMPLICIT_BIT);
-    }
-
-    // Verify exponent is in valid range
-    assert(result.exponent <= FLOAT64_EXPONENT_MAX);
-}
-
-// IEEE 754 compliant multiplication for 64-bit floats
-pub fn mul_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
-    // Safety: mul_float64_hint computes the multiplication and the result is verified by verify_mul_float64_result
-    let result = unsafe { mul_float64_hint(a, b) };
-    verify_mul_float64_result(a, b, result);
-    result
-}
-
 // ============================================================================
 // IEEE 754 Float32 Division
 // ============================================================================
 
-// Unconstrained hint for Float32 division
-unconstrained fn div_float32_hint(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
+// IEEE 754 compliant division for 32-bit floats
+pub fn div_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     // Determine special cases
     let a_is_nan = float32_is_nan(a);
     let b_is_nan = float32_is_nan(b);
@@ -1501,80 +1245,13 @@ unconstrained fn div_float32_hint(a: IEEE754Float32, b: IEEE754Float32) -> IEEE7
     result
 }
 
-// Verify a Float32 division result
-fn verify_div_float32_result(a: IEEE754Float32, b: IEEE754Float32, result: IEEE754Float32) {
-    let a_is_nan = float32_is_nan(a);
-    let b_is_nan = float32_is_nan(b);
-    let a_is_inf = float32_is_infinity(a);
-    let b_is_inf = float32_is_infinity(b);
-    let a_is_zero = float32_is_zero(a);
-    let b_is_zero = float32_is_zero(b);
-    let result_is_nan = float32_is_nan(result);
-    let result_is_inf = float32_is_infinity(result);
-    let result_is_zero = float32_is_zero(result);
-    let result_sign = a.sign ^ b.sign;
-
-    // NaN propagation
-    if a_is_nan | b_is_nan {
-        assert(result_is_nan);
-    }
-
-    // 0/0 = NaN
-    if a_is_zero & b_is_zero {
-        assert(result_is_nan);
-    }
-
-    // inf/inf = NaN
-    if a_is_inf & b_is_inf {
-        assert(result_is_nan);
-    }
-
-    // x/0 = inf (for finite non-zero x)
-    if !a_is_nan & !a_is_zero & !a_is_inf & b_is_zero {
-        assert(result_is_inf);
-        assert(result.sign == result_sign);
-    }
-
-    // 0/x = 0 (for finite non-zero x)
-    if a_is_zero & !b_is_nan & !b_is_zero {
-        assert(result_is_zero);
-    }
-
-    // inf/x = inf (for finite x)
-    if a_is_inf & !b_is_nan & !b_is_inf {
-        assert(result_is_inf);
-        assert(result.sign == result_sign);
-    }
-
-    // x/inf = 0 (for finite x)
-    if !a_is_nan & !a_is_inf & b_is_inf {
-        assert(result_is_zero);
-    }
-
-    // Verify mantissa is in valid range
-    if !result_is_nan & !result_is_inf {
-        assert(result.mantissa < FLOAT32_IMPLICIT_BIT);
-    }
-
-    // Verify exponent is in valid range
-    assert(result.exponent <= FLOAT32_EXPONENT_MAX);
-}
-
-// IEEE 754 compliant division for 32-bit floats
-pub fn div_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
-    // Safety: div_float32_hint computes the division and the result is verified by verify_div_float32_result
-    let result = unsafe { div_float32_hint(a, b) };
-    verify_div_float32_result(a, b, result);
-    result
-}
-
 // ============================================================================
 // IEEE 754 Float64 Division
 // ============================================================================
 
 // Helper for 128-bit division: divides a 128-bit dividend by a 64-bit divisor
 // Returns quotient (fits in 64 bits for our use case) and remainder
-unconstrained fn div_u128_by_u64(dividend: U128, divisor: u64) -> (u64, u64) {
+fn div_u128_by_u64(dividend: U128, divisor: u64) -> (u64, u64) {
     // For simplicity, we'll do this with a long division approach
     // This works because our dividend is at most 2^109 and divisor is at least 2^52
     // so the quotient fits in 57 bits (< 64 bits)
@@ -1620,8 +1297,8 @@ unconstrained fn div_u128_by_u64(dividend: U128, divisor: u64) -> (u64, u64) {
     }
 }
 
-// Unconstrained hint for Float64 division
-unconstrained fn div_float64_hint(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
+// IEEE 754 compliant division for 64-bit floats
+pub fn div_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     // Determine special cases
     let a_is_nan = float64_is_nan(a);
     let b_is_nan = float64_is_nan(b);
@@ -1798,72 +1475,5 @@ unconstrained fn div_float64_hint(a: IEEE754Float64, b: IEEE754Float64) -> IEEE7
         result = float64_nan();
     }
 
-    result
-}
-
-// Verify a Float64 division result
-fn verify_div_float64_result(a: IEEE754Float64, b: IEEE754Float64, result: IEEE754Float64) {
-    let a_is_nan = float64_is_nan(a);
-    let b_is_nan = float64_is_nan(b);
-    let a_is_inf = float64_is_infinity(a);
-    let b_is_inf = float64_is_infinity(b);
-    let a_is_zero = float64_is_zero(a);
-    let b_is_zero = float64_is_zero(b);
-    let result_is_nan = float64_is_nan(result);
-    let result_is_inf = float64_is_infinity(result);
-    let result_is_zero = float64_is_zero(result);
-    let result_sign = a.sign ^ b.sign;
-
-    // NaN propagation
-    if a_is_nan | b_is_nan {
-        assert(result_is_nan);
-    }
-
-    // 0/0 = NaN
-    if a_is_zero & b_is_zero {
-        assert(result_is_nan);
-    }
-
-    // inf/inf = NaN
-    if a_is_inf & b_is_inf {
-        assert(result_is_nan);
-    }
-
-    // x/0 = inf (for finite non-zero x)
-    if !a_is_nan & !a_is_zero & !a_is_inf & b_is_zero {
-        assert(result_is_inf);
-        assert(result.sign == result_sign);
-    }
-
-    // 0/x = 0 (for finite non-zero x)
-    if a_is_zero & !b_is_nan & !b_is_zero {
-        assert(result_is_zero);
-    }
-
-    // inf/x = inf (for finite x)
-    if a_is_inf & !b_is_nan & !b_is_inf {
-        assert(result_is_inf);
-        assert(result.sign == result_sign);
-    }
-
-    // x/inf = 0 (for finite x)
-    if !a_is_nan & !a_is_inf & b_is_inf {
-        assert(result_is_zero);
-    }
-
-    // Verify mantissa is in valid range
-    if !result_is_nan & !result_is_inf {
-        assert(result.mantissa < FLOAT64_IMPLICIT_BIT);
-    }
-
-    // Verify exponent is in valid range
-    assert(result.exponent <= FLOAT64_EXPONENT_MAX);
-}
-
-// IEEE 754 compliant division for 64-bit floats
-pub fn div_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
-    // Safety: div_float64_hint computes the division and the result is verified by verify_div_float64_result
-    let result = unsafe { div_float64_hint(a, b) };
-    verify_div_float64_result(a, b, result);
     result
 }
