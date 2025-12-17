@@ -10,14 +10,23 @@ use crate::types::{FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64};
 
 // IEEE 754 compliant addition for 64-bit doubles
 pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
-    let a_is_nan = float64_is_nan(a);
-    let b_is_nan = float64_is_nan(b);
-    let a_is_inf = float64_is_infinity(a);
-    let b_is_inf = float64_is_infinity(b);
-    let a_is_zero = float64_is_zero(a);
-    let b_is_zero = float64_is_zero(b);
-    let a_is_denormal = float64_is_denormal(a);
-    let b_is_denormal = float64_is_denormal(b);
+    // Combine special case checks to reduce redundant evaluations
+    let a_exp_is_max = a.exponent == FLOAT64_EXPONENT_MAX;
+    let b_exp_is_max = b.exponent == FLOAT64_EXPONENT_MAX;
+    let a_exp_is_zero = a.exponent == 0;
+    let b_exp_is_zero = b.exponent == 0;
+    let a_mant_is_zero = a.mantissa == 0;
+    let b_mant_is_zero = b.mantissa == 0;
+    
+    // Derive special cases from combined checks
+    let a_is_nan = a_exp_is_max & !a_mant_is_zero;
+    let b_is_nan = b_exp_is_max & !b_mant_is_zero;
+    let a_is_inf = a_exp_is_max & a_mant_is_zero;
+    let b_is_inf = b_exp_is_max & b_mant_is_zero;
+    let a_is_zero = a_exp_is_zero & a_mant_is_zero;
+    let b_is_zero = b_exp_is_zero & b_mant_is_zero;
+    let a_is_denormal = a_exp_is_zero & !a_mant_is_zero;
+    let b_is_denormal = b_exp_is_zero & !b_mant_is_zero;
 
     let mant_a_raw: u64 = if a_is_denormal {
         a.mantissa
