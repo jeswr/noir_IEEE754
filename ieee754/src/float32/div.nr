@@ -18,7 +18,7 @@ pub fn div_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     let b_exp_is_zero = b.exponent == 0;
     let a_mant_is_zero = a.mantissa == 0;
     let b_mant_is_zero = b.mantissa == 0;
-    
+
     // Derive special cases from combined checks
     let a_is_nan = a_exp_is_max & !a_mant_is_zero;
     let b_is_nan = b_exp_is_max & !b_mant_is_zero;

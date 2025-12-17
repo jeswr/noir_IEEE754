@@ -23,7 +23,7 @@ pub fn sqrt_float32(a: IEEE754Float32) -> IEEE754Float32 {
     let a_exp_is_max = a.exponent == FLOAT32_EXPONENT_MAX;
     let a_exp_is_zero = a.exponent == 0;
     let a_mant_is_zero = a.mantissa == 0;
-    
+
     let a_is_nan = a_exp_is_max & !a_mant_is_zero;
     let a_is_inf = a_exp_is_max & a_mant_is_zero;
     let a_is_zero = a_exp_is_zero & a_mant_is_zero;
