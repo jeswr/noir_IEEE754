@@ -9,7 +9,6 @@
 // - Comparisons are signed (negative numbers < positive numbers)
 // ============================================================================
 
-use crate::float64::helpers::{float64_is_nan, float64_is_zero};
 use crate::types::{FLOAT64_EXPONENT_MAX, IEEE754Float64};
 
 // IEEE 754 equality comparison
