@@ -26,6 +26,26 @@ pub struct IEEE754Float64 {
 pub global FLOAT32_EXPONENT_MAX: u8 = 255;
 pub global FLOAT32_IMPLICIT_BIT: u32 = 0x800000; // 1 << 23
 
+// Float32 special value constants (bit representations)
+pub global FLOAT32_ZERO: u32 = 0x00000000; // +0.0
+pub global FLOAT32_NEG_ZERO: u32 = 0x80000000; // -0.0
+pub global FLOAT32_ONE: u32 = 0x3F800000; // 1.0
+pub global FLOAT32_NEG_ONE: u32 = 0xBF800000; // -1.0
+pub global FLOAT32_INFINITY: u32 = 0x7F800000; // +Infinity
+pub global FLOAT32_NEG_INFINITY: u32 = 0xFF800000; // -Infinity
+pub global FLOAT32_NAN: u32 = 0x7FC00000; // Quiet NaN
+pub global FLOAT32_SIGNALING_NAN: u32 = 0x7FA00000; // Signaling NaN
+
 // Constants for IEEE 754 Float64
 pub global FLOAT64_EXPONENT_MAX: u16 = 2047;
 pub global FLOAT64_IMPLICIT_BIT: u64 = 0x10000000000000; // 1 << 52
+
+// Float64 special value constants (bit representations)
+pub global FLOAT64_ZERO: u64 = 0x0000000000000000; // +0.0
+pub global FLOAT64_NEG_ZERO: u64 = 0x8000000000000000; // -0.0
+pub global FLOAT64_ONE: u64 = 0x3FF0000000000000; // 1.0
+pub global FLOAT64_NEG_ONE: u64 = 0xBFF0000000000000; // -1.0
+pub global FLOAT64_INFINITY: u64 = 0x7FF0000000000000; // +Infinity
+pub global FLOAT64_NEG_INFINITY: u64 = 0xFFF0000000000000; // -Infinity
+pub global FLOAT64_NAN: u64 = 0x7FF8000000000000; // Quiet NaN
+pub global FLOAT64_SIGNALING_NAN: u64 = 0x7FF4000000000000; // Signaling NaN
