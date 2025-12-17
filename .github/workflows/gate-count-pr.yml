@@ -18,6 +18,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Read Noir version
+        id: noir-version
+        run: |
+          LATEST=$(jq -r '.latest' .github/noir-versions.json)
+          echo "version=$LATEST" >> $GITHUB_OUTPUT
+          echo "Using Noir version: $LATEST"
+
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -26,7 +33,13 @@ jobs:
       - name: Install Noir
         uses: noir-lang/noirup@v0.1.4
         with:
-          toolchain: 0.40.0
+          toolchain: ${{ steps.noir-version.outputs.version }}
+
+      - name: Verify Noir installation
+        run: |
+          echo "PATH: $PATH"
+          which nargo || echo "nargo not found in PATH"
+          nargo --version || echo "nargo command failed"
 
       - name: Run gate count benchmark on PR branch
         id: pr-benchmark
