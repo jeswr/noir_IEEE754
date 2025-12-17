@@ -110,3 +110,11 @@ b32+ =0 +1.000000P+0 +1.000000P+0 -> +1.000000P+1
 | `test_packages/` | Generated test packages (one per test suite file) |
 | `scripts/generate_tests.py` | Test generation from IBM FPgen |
 | `test_packages/` | Generated test packages (one per test suite file) |
+
+## Code Quality
+
+**Always run `nargo fmt` at the end of each run** to automatically format all Noir code and resolve linting errors. This ensures code style consistency across the project.
+
+```bash
+nargo fmt
+```

@@ -106,6 +106,20 @@ function float64ToHex(f) {
 | -∞ | `0xFF800000` | Negative infinity |
 | NaN | `0x7FC00000` | Quiet NaN |
 
+**Common Float64 Values:**
+| Decimal | Hex | Description |
+|---------|-----|-------------|
+| 0.0 | `0x0000000000000000` | Positive zero |
+| -0.0 | `0x8000000000000000` | Negative zero |
+| 1.0 | `0x3FF0000000000000` | One |
+| 2.0 | `0x4000000000000000` | Two |
+| 3.0 | `0x4008000000000000` | Three |
+| 0.5 | `0x3FE0000000000000` | Half |
+| -1.0 | `0xBFF0000000000000` | Negative one |
+| +∞ | `0x7FF0000000000000` | Positive infinity |
+| -∞ | `0xFFF0000000000000` | Negative infinity |
+| NaN | `0x7FF8000000000000` | Quiet NaN |
+
 ### Basic Usage
 
 ```noir
@@ -119,6 +133,9 @@ use ieee754::float::{
     div_float32, div_float64,
     sqrt_float32, sqrt_float64,
     abs_float32, abs_float64,
+    // Special value constants
+    FLOAT32_ZERO, FLOAT32_ONE, FLOAT32_NEG_ONE, FLOAT32_INFINITY, FLOAT32_NAN,
+    FLOAT64_ZERO, FLOAT64_ONE, FLOAT64_NEG_ONE, FLOAT64_INFINITY, FLOAT64_NAN,
     // Comparison operations
     float32_eq, float32_ne, float32_lt, float32_le, float32_gt, float32_ge,
     float64_eq, float64_ne, float64_lt, float64_le, float64_gt, float64_ge
@@ -128,6 +145,10 @@ fn main() {
     // Create floats from bit representation (use conversion methods above)
     let a = float32_from_bits(0x40400000); // 3.0f
     let b = float32_from_bits(0x40000000); // 2.0f
+    
+    // Or use predefined constants
+    let one = float32_from_bits(FLOAT32_ONE);
+    let zero = float32_from_bits(FLOAT32_ZERO);
     
     // Perform arithmetic operations
     let sum = add_float32(a, b);        // 3.0 + 2.0 = 5.0

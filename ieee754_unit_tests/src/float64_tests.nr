@@ -540,3 +540,72 @@ fn test_float64_abs_nan() {
     assert(float64_is_nan(result));
     assert(result.sign == 0);
 }
+
+// ============================================================================
+// Float64 Constant Tests
+// ============================================================================
+
+use ieee754::float::{
+    FLOAT64_INFINITY, FLOAT64_NAN, FLOAT64_NEG_INFINITY, FLOAT64_NEG_ONE, FLOAT64_NEG_ZERO,
+    FLOAT64_ONE, FLOAT64_SIGNALING_NAN, FLOAT64_ZERO,
+};
+
+#[test]
+fn test_float64_constant_zero() {
+    let zero = float64_from_bits(FLOAT64_ZERO);
+    assert(float64_is_zero(zero));
+    assert(zero.sign == 0);
+}
+
+#[test]
+fn test_float64_constant_neg_zero() {
+    let neg_zero = float64_from_bits(FLOAT64_NEG_ZERO);
+    assert(float64_is_zero(neg_zero));
+    assert(neg_zero.sign == 1);
+}
+
+#[test]
+fn test_float64_constant_one() {
+    let one = float64_from_bits(FLOAT64_ONE);
+    assert(float64_to_bits(one) == 0x3FF0000000000000);
+    assert(one.sign == 0);
+    assert(one.exponent == 1023);
+    assert(one.mantissa == 0);
+}
+
+#[test]
+fn test_float64_constant_neg_one() {
+    let neg_one = float64_from_bits(FLOAT64_NEG_ONE);
+    assert(float64_to_bits(neg_one) == 0xBFF0000000000000);
+    assert(neg_one.sign == 1);
+    assert(neg_one.exponent == 1023);
+    assert(neg_one.mantissa == 0);
+}
+
+#[test]
+fn test_float64_constant_infinity() {
+    let inf = float64_from_bits(FLOAT64_INFINITY);
+    assert(float64_is_infinity(inf));
+    assert(inf.sign == 0);
+}
+
+#[test]
+fn test_float64_constant_neg_infinity() {
+    let neg_inf = float64_from_bits(FLOAT64_NEG_INFINITY);
+    assert(float64_is_infinity(neg_inf));
+    assert(neg_inf.sign == 1);
+}
+
+#[test]
+fn test_float64_constant_nan() {
+    let nan = float64_from_bits(FLOAT64_NAN);
+    assert(float64_is_nan(nan));
+    assert(float64_to_bits(nan) == 0x7FF8000000000000);
+}
+
+#[test]
+fn test_float64_constant_signaling_nan() {
+    let snan = float64_from_bits(FLOAT64_SIGNALING_NAN);
+    assert(float64_is_nan(snan));
+    assert(float64_to_bits(snan) == 0x7FF4000000000000);
+}
