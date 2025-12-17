@@ -10,23 +10,26 @@
 // ============================================================================
 
 use crate::float32::helpers::{float32_is_nan, float32_is_zero};
-use crate::types::IEEE754Float32;
+use crate::types::{FLOAT32_EXPONENT_MAX, IEEE754Float32};
 
 // IEEE 754 equality comparison
 // Returns true if a == b
 // NaN != NaN (and NaN != anything)
 // +0 == -0
 pub fn float32_eq(a: IEEE754Float32, b: IEEE754Float32) -> bool {
-    // NaN is not equal to anything, including itself
-    let a_is_nan = float32_is_nan(a);
-    let b_is_nan = float32_is_nan(b);
+    // Optimize NaN check by checking exponent first
+    let a_exp_is_max = a.exponent == FLOAT32_EXPONENT_MAX;
+    let b_exp_is_max = b.exponent == FLOAT32_EXPONENT_MAX;
+    let a_is_nan = a_exp_is_max & (a.mantissa != 0);
+    let b_is_nan = b_exp_is_max & (b.mantissa != 0);
 
     let mut result = false;
 
     if !a_is_nan & !b_is_nan {
         // Both zeros are equal regardless of sign
-        let a_is_zero = float32_is_zero(a);
-        let b_is_zero = float32_is_zero(b);
+        let both_exp_zero = (a.exponent == 0) & (b.exponent == 0);
+        let a_is_zero = both_exp_zero & (a.mantissa == 0);
+        let b_is_zero = both_exp_zero & (b.mantissa == 0);
 
         if a_is_zero & b_is_zero {
             result = true;
@@ -49,15 +52,18 @@ pub fn float32_ne(a: IEEE754Float32, b: IEEE754Float32) -> bool {
 // Returns true if a < b
 // If either operand is NaN, returns false (unordered)
 pub fn float32_lt(a: IEEE754Float32, b: IEEE754Float32) -> bool {
-    // NaN comparisons are always false
-    let a_is_nan = float32_is_nan(a);
-    let b_is_nan = float32_is_nan(b);
+    // Optimize NaN check by checking exponent first
+    let a_exp_is_max = a.exponent == FLOAT32_EXPONENT_MAX;
+    let b_exp_is_max = b.exponent == FLOAT32_EXPONENT_MAX;
+    let a_is_nan = a_exp_is_max & (a.mantissa != 0);
+    let b_is_nan = b_exp_is_max & (b.mantissa != 0);
 
     let mut result = false;
 
     if !a_is_nan & !b_is_nan {
-        let a_is_zero = float32_is_zero(a);
-        let b_is_zero = float32_is_zero(b);
+        let both_exp_zero = (a.exponent == 0) & (b.exponent == 0);
+        let a_is_zero = both_exp_zero & (a.mantissa == 0);
+        let b_is_zero = both_exp_zero & (b.mantissa == 0);
 
         // +0 and -0 are equal, so neither is less than the other
         if a_is_zero & b_is_zero {
@@ -90,9 +96,11 @@ pub fn float32_lt(a: IEEE754Float32, b: IEEE754Float32) -> bool {
 // Returns true if a <= b
 // If either operand is NaN, returns false (unordered)
 pub fn float32_le(a: IEEE754Float32, b: IEEE754Float32) -> bool {
-    // NaN comparisons are always false
-    let a_is_nan = float32_is_nan(a);
-    let b_is_nan = float32_is_nan(b);
+    // Optimize NaN check by checking exponent first
+    let a_exp_is_max = a.exponent == FLOAT32_EXPONENT_MAX;
+    let b_exp_is_max = b.exponent == FLOAT32_EXPONENT_MAX;
+    let a_is_nan = a_exp_is_max & (a.mantissa != 0);
+    let b_is_nan = b_exp_is_max & (b.mantissa != 0);
 
     let mut result = false;
 
@@ -122,7 +130,9 @@ pub fn float32_ge(a: IEEE754Float32, b: IEEE754Float32) -> bool {
 // IEEE 754 unordered comparison
 // Returns true if either operand is NaN
 pub fn float32_unordered(a: IEEE754Float32, b: IEEE754Float32) -> bool {
-    float32_is_nan(a) | float32_is_nan(b)
+    let a_exp_is_max = a.exponent == FLOAT32_EXPONENT_MAX;
+    let b_exp_is_max = b.exponent == FLOAT32_EXPONENT_MAX;
+    (a_exp_is_max & (a.mantissa != 0)) | (b_exp_is_max & (b.mantissa != 0))
 }
 
 // IEEE 754 total ordering
@@ -130,8 +140,10 @@ pub fn float32_unordered(a: IEEE754Float32, b: IEEE754Float32) -> bool {
 // For NaN, this follows IEEE 754-2008 totalOrder: -NaN < -Inf < ... < -0 < +0 < ... < +Inf < +NaN
 // Note: This function provides a total ordering even for NaN values
 pub fn float32_compare(a: IEEE754Float32, b: IEEE754Float32) -> i8 {
-    let a_is_nan = float32_is_nan(a);
-    let b_is_nan = float32_is_nan(b);
+    let a_exp_is_max = a.exponent == FLOAT32_EXPONENT_MAX;
+    let b_exp_is_max = b.exponent == FLOAT32_EXPONENT_MAX;
+    let a_is_nan = a_exp_is_max & (a.mantissa != 0);
+    let b_is_nan = b_exp_is_max & (b.mantissa != 0);
 
     let mut result: i8 = 0;
 
