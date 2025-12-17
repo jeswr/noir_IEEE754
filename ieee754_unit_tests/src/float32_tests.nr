@@ -615,3 +615,72 @@ fn test_float32_abs_nan() {
     assert(float32_is_nan(result));
     assert(result.sign == 0);
 }
+
+// ============================================================================
+// Float32 Constant Tests
+// ============================================================================
+
+use ieee754::float::{
+    FLOAT32_ZERO, FLOAT32_NEG_ZERO, FLOAT32_ONE, FLOAT32_NEG_ONE,
+    FLOAT32_INFINITY, FLOAT32_NEG_INFINITY, FLOAT32_NAN, FLOAT32_SIGNALING_NAN
+};
+
+#[test]
+fn test_float32_constant_zero() {
+    let zero = float32_from_bits(FLOAT32_ZERO);
+    assert(float32_is_zero(zero));
+    assert(zero.sign == 0);
+}
+
+#[test]
+fn test_float32_constant_neg_zero() {
+    let neg_zero = float32_from_bits(FLOAT32_NEG_ZERO);
+    assert(float32_is_zero(neg_zero));
+    assert(neg_zero.sign == 1);
+}
+
+#[test]
+fn test_float32_constant_one() {
+    let one = float32_from_bits(FLOAT32_ONE);
+    assert(float32_to_bits(one) == 0x3F800000);
+    assert(one.sign == 0);
+    assert(one.exponent == 127);
+    assert(one.mantissa == 0);
+}
+
+#[test]
+fn test_float32_constant_neg_one() {
+    let neg_one = float32_from_bits(FLOAT32_NEG_ONE);
+    assert(float32_to_bits(neg_one) == 0xBF800000);
+    assert(neg_one.sign == 1);
+    assert(neg_one.exponent == 127);
+    assert(neg_one.mantissa == 0);
+}
+
+#[test]
+fn test_float32_constant_infinity() {
+    let inf = float32_from_bits(FLOAT32_INFINITY);
+    assert(float32_is_infinity(inf));
+    assert(inf.sign == 0);
+}
+
+#[test]
+fn test_float32_constant_neg_infinity() {
+    let neg_inf = float32_from_bits(FLOAT32_NEG_INFINITY);
+    assert(float32_is_infinity(neg_inf));
+    assert(neg_inf.sign == 1);
+}
+
+#[test]
+fn test_float32_constant_nan() {
+    let nan = float32_from_bits(FLOAT32_NAN);
+    assert(float32_is_nan(nan));
+    assert(float32_to_bits(nan) == 0x7FC00000);
+}
+
+#[test]
+fn test_float32_constant_signaling_nan() {
+    let snan = float32_from_bits(FLOAT32_SIGNALING_NAN);
+    assert(float32_is_nan(snan));
+    assert(float32_to_bits(snan) == 0x7FA00000);
+}
