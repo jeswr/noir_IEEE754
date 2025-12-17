@@ -8,6 +8,7 @@ pub(crate) mod mul;
 pub(crate) mod div;
 pub(crate) mod cmp;
 pub(crate) mod sqrt;
+pub mod packed;
 
 // Re-export all public functions
 pub use helpers::{
@@ -23,6 +24,13 @@ pub use cmp::{
 pub use div::div_float64;
 pub use mul::mul_float64;
 pub use sqrt::sqrt_float64;
+
+// Re-export packed representation functions
+pub use packed::{
+    abs_float64_bits, add_float64_bits, div_float64_bits, float64_compare_bits, float64_eq_bits,
+    float64_ge_bits, float64_gt_bits, float64_le_bits, float64_lt_bits, float64_ne_bits,
+    float64_unordered_bits, mul_float64_bits, sqrt_float64_bits, sub_float64_bits,
+};
 
 // Subtraction is implemented as a + (-b)
 use crate::types::IEEE754Float64;

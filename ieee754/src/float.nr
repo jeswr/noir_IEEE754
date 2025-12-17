@@ -8,8 +8,8 @@
 // Module structure:
 // - types.nr: Core types (IEEE754Float32, IEEE754Float64) and constants
 // - utils.nr: Shared utility functions (shift operations, U128 arithmetic)
-// - float32/: Float32 operations (helpers, add, mul, div)
-// - float64/: Float64 operations (helpers, add, mul, div)
+// - float32/: Float32 operations (helpers, add, mul, div, packed)
+// - float64/: Float64 operations (helpers, add, mul, div, packed)
 // ============================================================================
 
 // Re-export types and constants
@@ -34,6 +34,10 @@ pub use crate::float32::{
     float32_compare,
     // Square root
     sqrt_float32,
+    // Packed representation operations (on u32 bit patterns)
+    add_float32_bits, div_float32_bits, mul_float32_bits, sub_float32_bits, sqrt_float32_bits,
+    abs_float32_bits, float32_compare_bits, float32_eq_bits, float32_ge_bits, float32_gt_bits,
+    float32_le_bits, float32_lt_bits, float32_ne_bits, float32_unordered_bits,
 };
 
 // Re-export Float64 operations
@@ -46,4 +50,8 @@ pub use crate::float64::{
     float64_compare,
     // Square root
     sqrt_float64,
+    // Packed representation operations (on u64 bit patterns)
+    add_float64_bits, div_float64_bits, mul_float64_bits, sub_float64_bits, sqrt_float64_bits,
+    abs_float64_bits, float64_compare_bits, float64_eq_bits, float64_ge_bits, float64_gt_bits,
+    float64_le_bits, float64_lt_bits, float64_ne_bits, float64_unordered_bits,
 };

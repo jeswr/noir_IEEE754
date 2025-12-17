@@ -3,5 +3,6 @@
 
 mod float32_tests;
 mod float64_tests;
+mod packed_tests;
 
 fn main() {}
