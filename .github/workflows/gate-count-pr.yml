@@ -109,7 +109,7 @@ jobs:
                   # Handle special case: base is 0
                   if base_acir == 0:
                       if pr_acir > 0:
-                          acir_change = f"🔴 +{acir_diff} (NEW)"
+                          acir_change = f"🔴 +{pr_acir} (NEW)"
                       else:
                           acir_change = "—"
                   elif acir_diff > 0:
@@ -134,7 +134,7 @@ jobs:
                   # Handle special case: base is 0
                   if base_brillig == 0:
                       if pr_brillig > 0:
-                          brillig_change = f"🔴 +{brillig_diff} (NEW)"
+                          brillig_change = f"🔴 +{pr_brillig} (NEW)"
                       else:
                           brillig_change = "—"
                   elif brillig_diff > 0:
