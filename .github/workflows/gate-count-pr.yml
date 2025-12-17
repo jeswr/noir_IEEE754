@@ -161,7 +161,7 @@ jobs:
                   total_acir_change = f"🔴 +{total_pr_acir} (NEW)"
               else:
                   total_acir_change = "—"
-          elif total_pr_acir >= 0:
+          elif total_base_acir > 0 and total_pr_acir >= 0:
               total_acir_diff = total_pr_acir - total_base_acir
               total_acir_pct = (total_acir_diff / total_base_acir * 100)
               if total_acir_diff > 0:
@@ -179,7 +179,7 @@ jobs:
                   total_brillig_change = f"🔴 +{total_pr_brillig} (NEW)"
               else:
                   total_brillig_change = "—"
-          elif total_pr_brillig >= 0:
+          elif total_base_brillig > 0 and total_pr_brillig >= 0:
               total_brillig_diff = total_pr_brillig - total_base_brillig
               total_brillig_pct = (total_brillig_diff / total_base_brillig * 100)
               if total_brillig_diff > 0:
