@@ -19,11 +19,15 @@ use crate::utils::shift_right_sticky_u64;
 
 // IEEE 754 compliant square root for 32-bit floats
 pub fn sqrt_float32(a: IEEE754Float32) -> IEEE754Float32 {
-    // Handle special cases
-    let a_is_nan = float32_is_nan(a);
-    let a_is_inf = float32_is_infinity(a);
-    let a_is_zero = float32_is_zero(a);
-    let a_is_denormal = float32_is_denormal(a);
+    // Optimize special case checks
+    let a_exp_is_max = a.exponent == FLOAT32_EXPONENT_MAX;
+    let a_exp_is_zero = a.exponent == 0;
+    let a_mant_is_zero = a.mantissa == 0;
+    
+    let a_is_nan = a_exp_is_max & !a_mant_is_zero;
+    let a_is_inf = a_exp_is_max & a_mant_is_zero;
+    let a_is_zero = a_exp_is_zero & a_mant_is_zero;
+    let a_is_denormal = a_exp_is_zero & !a_mant_is_zero;
     let a_is_negative = a.sign == 1;
 
     // Normalize denormals and get effective exponent
