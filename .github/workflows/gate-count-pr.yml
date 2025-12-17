@@ -1,0 +1,223 @@
+name: Gate Count PR Comment
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  gate-count-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Read Noir version
+        id: noir-version
+        run: |
+          LATEST=$(jq -r '.latest' .github/noir-versions.json)
+          echo "version=$LATEST" >> $GITHUB_OUTPUT
+          echo "Using Noir version: $LATEST"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install Noir
+        uses: noir-lang/noirup@v0.1.4
+        with:
+          toolchain: ${{ steps.noir-version.outputs.version }}
+
+      - name: Verify Noir installation
+        run: |
+          echo "PATH: $PATH"
+          which nargo || echo "nargo not found in PATH"
+          nargo --version || echo "nargo command failed"
+
+      - name: Run gate count benchmark on PR branch
+        id: pr-benchmark
+        run: |
+          python3 scripts/benchmark_gates.py --output /tmp/pr_gates.json
+          echo "PR branch gate counts generated"
+
+      - name: Checkout base branch
+        run: |
+          git fetch origin ${{ github.base_ref }}
+          git checkout origin/${{ github.base_ref }}
+
+      - name: Run gate count benchmark on base branch
+        id: base-benchmark
+        run: |
+          python3 scripts/benchmark_gates.py --output /tmp/base_gates.json
+          echo "Base branch gate counts generated"
+
+      - name: Compare gate counts and generate comment
+        id: compare
+        run: |
+          python3 << 'EOF'
+          import json
+          import os
+          
+          # Load benchmark results
+          with open('/tmp/pr_gates.json') as f:
+              pr_data = json.load(f)
+              pr_results = pr_data[-1] if isinstance(pr_data, list) else pr_data
+          
+          with open('/tmp/base_gates.json') as f:
+              base_data = json.load(f)
+              base_results = base_data[-1] if isinstance(base_data, list) else base_data
+          
+          pr_benchmarks = pr_results.get("benchmarks", {})
+          base_benchmarks = base_results.get("benchmarks", {})
+          
+          # Generate markdown comment
+          comment = "## 🔢 Gate Count Report\n\n"
+          comment += f"**PR Branch**: `{pr_results.get('git_commit', 'unknown')}`\n"
+          comment += f"**Base Branch**: `{base_results.get('git_commit', 'unknown')}`\n\n"
+          
+          comment += "| Operation | Base ACIR | PR ACIR | Change | Base Brillig | PR Brillig | Change |\n"
+          comment += "|-----------|-----------|---------|--------|--------------|------------|--------|\n"
+          
+          total_base_acir = 0
+          total_pr_acir = 0
+          total_base_brillig = 0
+          total_pr_brillig = 0
+          has_changes = False
+          
+          for name in sorted(set(base_benchmarks.keys()) | set(pr_benchmarks.keys())):
+              base_info = base_benchmarks.get(name, {})
+              pr_info = pr_benchmarks.get(name, {})
+              
+              base_acir = base_info.get("acir_opcodes", "N/A")
+              pr_acir = pr_info.get("acir_opcodes", "N/A")
+              base_brillig = base_info.get("brillig_opcodes", "N/A")
+              pr_brillig = pr_info.get("brillig_opcodes", "N/A")
+              
+              # Calculate ACIR change
+              if isinstance(base_acir, int) and isinstance(pr_acir, int):
+                  acir_diff = pr_acir - base_acir
+                  if acir_diff != 0:
+                      has_changes = True
+                  
+                  # Handle special case: base is 0
+                  if base_acir == 0:
+                      if pr_acir > 0:
+                          acir_change = f"🔴 +{pr_acir} (NEW)"
+                      else:
+                          acir_change = "—"
+                  elif acir_diff != 0:
+                      acir_pct = (acir_diff / base_acir * 100)
+                      if acir_diff > 0:
+                          acir_change = f"🔴 +{acir_diff} ({acir_pct:+.1f}%)"
+                      else:
+                          acir_change = f"🟢 {acir_diff} ({acir_pct:.1f}%)"
+                  else:
+                      acir_change = "—"
+                  total_base_acir += base_acir
+                  total_pr_acir += pr_acir
+              else:
+                  acir_change = "N/A"
+              
+              # Calculate Brillig change
+              if isinstance(base_brillig, int) and isinstance(pr_brillig, int):
+                  brillig_diff = pr_brillig - base_brillig
+                  if brillig_diff != 0:
+                      has_changes = True
+                  
+                  # Handle special case: base is 0
+                  if base_brillig == 0:
+                      if pr_brillig > 0:
+                          brillig_change = f"🔴 +{pr_brillig} (NEW)"
+                      else:
+                          brillig_change = "—"
+                  elif brillig_diff != 0:
+                      brillig_pct = (brillig_diff / base_brillig * 100)
+                      if brillig_diff > 0:
+                          brillig_change = f"🔴 +{brillig_diff} ({brillig_pct:+.1f}%)"
+                      else:
+                          brillig_change = f"🟢 {brillig_diff} ({brillig_pct:.1f}%)"
+                  else:
+                      brillig_change = "—"
+                  total_base_brillig += base_brillig
+                  total_pr_brillig += pr_brillig
+              else:
+                  brillig_change = "N/A"
+              
+              comment += f"| {name} | {base_acir} | {pr_acir} | {acir_change} | {base_brillig} | {pr_brillig} | {brillig_change} |\n"
+          
+          # Add totals
+          comment += "|-----------|-----------|---------|--------|--------------|------------|--------|\n"
+          
+          # Handle ACIR total
+          if total_base_acir == 0:
+              if total_pr_acir > 0:
+                  total_acir_change = f"🔴 +{total_pr_acir} (NEW)"
+              else:
+                  total_acir_change = "—"
+          elif total_base_acir > 0 and total_pr_acir >= 0:
+              total_acir_diff = total_pr_acir - total_base_acir
+              total_acir_pct = (total_acir_diff / total_base_acir * 100)
+              if total_acir_diff > 0:
+                  total_acir_change = f"🔴 +{total_acir_diff} ({total_acir_pct:+.1f}%)"
+              elif total_acir_diff < 0:
+                  total_acir_change = f"🟢 {total_acir_diff} ({total_acir_pct:.1f}%)"
+              else:
+                  total_acir_change = "—"
+          else:
+              total_acir_change = "N/A"
+          
+          # Handle Brillig total
+          if total_base_brillig == 0:
+              if total_pr_brillig > 0:
+                  total_brillig_change = f"🔴 +{total_pr_brillig} (NEW)"
+              else:
+                  total_brillig_change = "—"
+          elif total_base_brillig > 0 and total_pr_brillig >= 0:
+              total_brillig_diff = total_pr_brillig - total_base_brillig
+              total_brillig_pct = (total_brillig_diff / total_base_brillig * 100)
+              if total_brillig_diff > 0:
+                  total_brillig_change = f"🔴 +{total_brillig_diff} ({total_brillig_pct:+.1f}%)"
+              elif total_brillig_diff < 0:
+                  total_brillig_change = f"🟢 {total_brillig_diff} ({total_brillig_pct:.1f}%)"
+              else:
+                  total_brillig_change = "—"
+          else:
+              total_brillig_change = "N/A"
+          
+          comment += f"| **TOTAL** | **{total_base_acir}** | **{total_pr_acir}** | **{total_acir_change}** | **{total_base_brillig}** | **{total_pr_brillig}** | **{total_brillig_change}** |\n"
+          
+          comment += "\n---\n"
+          if not has_changes:
+              comment += "*No gate count changes detected*\n"
+          else:
+              comment += "*🟢 Green = Reduction (better), 🔴 Red = Increase (worse)*\n"
+          
+          # Save comment to file
+          with open('/tmp/comment.md', 'w') as f:
+              f.write(comment)
+          
+          print("Comment generated successfully")
+          EOF
+
+      - name: Find existing comment
+        id: find-comment
+        uses: peter-evans/find-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: '🔢 Gate Count Report'
+
+      - name: Create or update PR comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: /tmp/comment.md
+          edit-mode: replace
