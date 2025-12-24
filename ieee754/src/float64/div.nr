@@ -6,11 +6,17 @@ use crate::float64::helpers::{
     float64_infinity, float64_is_denormal, float64_is_infinity, float64_is_nan, float64_is_zero,
     float64_nan, float64_zero,
 };
-use crate::types::{FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64};
-use crate::utils::{div_u128_by_u64, shift_right_sticky_u64, U128};
+use crate::types::{
+    FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64, ROUNDING_MODE_NEAREST_EVEN,
+};
+use crate::utils::{div_u128_by_u64, shift_right_sticky_u64, should_round_up_4bit, U128};
 
-// IEEE 754 compliant division for 64-bit floats
-pub fn div_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
+// IEEE 754 compliant division for 64-bit floats with rounding mode
+pub fn div_float64_with_rounding(
+    a: IEEE754Float64,
+    b: IEEE754Float64,
+    rounding_mode: u8,
+) -> IEEE754Float64 {
     // Determine special cases
     let a_is_nan = float64_is_nan(a);
     let b_is_nan = float64_is_nan(b);
@@ -194,8 +200,13 @@ pub fn div_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     result_mant = result_mant >> 4;
 
     // Round to nearest, ties to even (using 4-bit guard, threshold is 8)
-    let should_round_up = (guard_bits > 8) | ((guard_bits == 8) & ((result_mant & 1) == 1));
-    if should_round_up {
+    let should_round = if rounding_mode == 0 {
+        // NEAREST_EVEN (optimized inline)
+        (guard_bits > 8) | ((guard_bits == 8) & ((result_mant & 1) == 1))
+    } else {
+        should_round_up_4bit(guard_bits, result_mant, result_sign, rounding_mode)
+    };
+    if should_round {
         result_mant = result_mant + 1;
         // Check for overflow from rounding
         if !is_denormal_result & (result_mant >= (FLOAT64_IMPLICIT_BIT << 1)) {
@@ -264,4 +275,10 @@ pub fn div_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     }
 
     result
+}
+
+// IEEE 754 compliant division for 64-bit floats (default rounding mode)
+// Backward-compatible wrapper that uses round-to-nearest-ties-to-even
+pub fn div_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
+    div_float64_with_rounding(a, b, ROUNDING_MODE_NEAREST_EVEN)
 }

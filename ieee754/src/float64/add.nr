@@ -6,10 +6,17 @@ use crate::float64::helpers::{
     float64_infinity, float64_is_denormal, float64_is_infinity, float64_is_nan, float64_is_zero,
     float64_nan, float64_zero,
 };
-use crate::types::{FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64};
+use crate::types::{
+    FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64, ROUNDING_MODE_NEAREST_EVEN,
+};
+use crate::utils::should_round_up_8bit;
 
-// IEEE 754 compliant addition for 64-bit doubles
-pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
+// IEEE 754 compliant addition for 64-bit doubles with rounding mode
+pub fn add_float64_with_rounding(
+    a: IEEE754Float64,
+    b: IEEE754Float64,
+    rounding_mode: u8,
+) -> IEEE754Float64 {
     let a_is_nan = float64_is_nan(a);
     let b_is_nan = float64_is_nan(b);
     let a_is_inf = float64_is_infinity(a);
@@ -184,10 +191,14 @@ pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     let guard_bits = result_mant & 0xFF;
     result_mant = result_mant >> 8;
     let round_bits = guard_bits | result_sticky;
-    let halfway: u64 = 0x80;
-    let should_round_up =
-        (round_bits > halfway) | ((round_bits == halfway) & ((result_mant & 1) == 1));
-    if should_round_up {
+    let should_round = if rounding_mode == 0 {
+        // NEAREST_EVEN (optimized inline)
+        let halfway: u64 = 0x80;
+        (round_bits > halfway) | ((round_bits == halfway) & ((result_mant & 1) == 1))
+    } else {
+        should_round_up_8bit(round_bits, result_mant, result_sign, rounding_mode)
+    };
+    if should_round {
         result_mant = result_mant + 1;
         if result_mant >= (FLOAT64_IMPLICIT_BIT << 1) {
             result_mant = result_mant >> 1;
@@ -236,4 +247,10 @@ pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
     }
 
     result
+}
+
+// IEEE 754 compliant addition for 64-bit doubles (default rounding mode)
+// Backward-compatible wrapper that uses round-to-nearest-ties-to-even
+pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
+    add_float64_with_rounding(a, b, ROUNDING_MODE_NEAREST_EVEN)
 }

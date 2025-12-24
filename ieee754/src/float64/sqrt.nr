@@ -14,11 +14,13 @@ use crate::float64::helpers::{
     float64_infinity, float64_is_denormal, float64_is_infinity, float64_is_nan, float64_is_zero,
     float64_nan, float64_zero,
 };
-use crate::types::{FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64};
-use crate::utils::{shift_right_sticky_u64, U128};
+use crate::types::{
+    FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64, ROUNDING_MODE_NEAREST_EVEN,
+};
+use crate::utils::{shift_right_sticky_u64, should_round_up, U128};
 
-// IEEE 754 compliant square root for 64-bit floats
-pub fn sqrt_float64(a: IEEE754Float64) -> IEEE754Float64 {
+// IEEE 754 compliant square root for 64-bit floats with rounding mode
+pub fn sqrt_float64_with_rounding(a: IEEE754Float64, rounding_mode: u8) -> IEEE754Float64 {
     // Handle special cases
     let a_is_nan = float64_is_nan(a);
     let a_is_inf = float64_is_infinity(a);
@@ -179,8 +181,13 @@ pub fn sqrt_float64(a: IEEE754Float64) -> IEEE754Float64 {
     result_mant = result_mant >> 3;
 
     // Round to nearest, ties to even
-    let should_round_up = (guard_bits > 4) | ((guard_bits == 4) & ((result_mant & 1) == 1));
-    if should_round_up {
+    let should_round = if rounding_mode == 0 {
+        // NEAREST_EVEN (optimized inline)
+        (guard_bits > 4) | ((guard_bits == 4) & ((result_mant & 1) == 1))
+    } else {
+        should_round_up(guard_bits, result_mant, 0, rounding_mode)
+    }; // sqrt result is always positive
+    if should_round {
         result_mant = result_mant + 1;
         // Check for overflow from rounding
         if !is_denormal_result & (result_mant >= (FLOAT64_IMPLICIT_BIT << 1)) {
@@ -236,4 +243,10 @@ pub fn sqrt_float64(a: IEEE754Float64) -> IEEE754Float64 {
     }
 
     result
+}
+
+// IEEE 754 compliant square root for 64-bit floats (default rounding mode)
+// Backward-compatible wrapper that uses round-to-nearest-ties-to-even
+pub fn sqrt_float64(a: IEEE754Float64) -> IEEE754Float64 {
+    sqrt_float64_with_rounding(a, ROUNDING_MODE_NEAREST_EVEN)
 }
