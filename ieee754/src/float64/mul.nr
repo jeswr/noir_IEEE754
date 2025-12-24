@@ -282,9 +282,10 @@ pub fn mul_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
                     let shift_left = (target_pos - leading_pos) as u64;
                     // Get bits from low part and shift left
                     result_mant = product.low << (shift_left as u8);
-                    // Add bits from high if any overflow into the range
+                    // Add overflow bits from high part that shift into the range
                     if (product.high != 0) & (shift_left < 64) {
-                        result_mant = result_mant | (product.high << ((shift_left + 64) as u8));
+                        // Shift high right to get the bits that overflow from low
+                        result_mant = result_mant | (product.high >> ((64 - shift_left) as u8));
                     }
                 }
             }

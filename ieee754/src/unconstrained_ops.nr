@@ -92,11 +92,13 @@ pub fn count_leading_zeros_u64_verified(value: u64) -> u64 {
         assert(bit == 1);
     }
 
-    // Verification: If count > 0, bit at position (64 - count) must be 0 (if it exists)
+    // Verification: If 0 < count < 64, all bits more significant than (63 - count)
+    // must be 0. Shifting right by (64 - count) moves these high bits to the LSB positions.
+    // This ensures count is uniquely determined.
     if (count > 0) & (count < 64) {
-        let prev_bit_pos = (64 - count) as u8;
-        let prev_bit = (value >> prev_bit_pos) & 1;
-        assert(prev_bit == 0);
+        let high_bits_shift = (64 - count) as u8;
+        let high_bits = value >> high_bits_shift;
+        assert(high_bits == 0);
     }
 
     count
@@ -156,22 +158,24 @@ pub fn shift_right_sticky_u64_verified(value: u64, shift: u64) -> u64 {
             assert(result == 1);
         }
     } else if shift > 0 {
-        // For normal shifts, verify the core property:
-        // result should equal (value >> (shift as u8)) with sticky bit
-        // We can't easily verify this directly without recomputing,
-        // but we can verify key properties:
-
-        // 1. Result should not exceed (value >> (shift as u8)) by more than 1 (sticky bit)
+        // For normal shifts (0 < shift < 64), verify the exact sticky shift behavior.
+        // Compute the simple logical right shift.
         let simple_shift = value >> (shift as u8);
+
+        // Bits that are shifted out when shifting right by `shift`.
+        let mask: u64 = (1 << (shift as u8)) - 1;
+        let shifted_out: u64 = value & mask;
+
+        // Coarse bound: result can be either the simple shift or the simple shift with LSB set.
         assert((result == simple_shift) | (result == simple_shift | 1));
 
-        // 2. If sticky bit is set in result, either:
-        //    - Original value had bit 0 set after shift, OR
-        //    - Some bits were shifted out (we verify this by: if result has sticky and
-        //      simple_shift doesn't, then value must not equal simple_shift << (shift as u8))
-        if (result & 1 == 1) & (simple_shift & 1 == 0) {
-            // Sticky bit was added, so something must have been shifted out
-            assert(value != simple_shift << (shift as u8));
+        // If any nonzero bits are shifted out, the sticky bit MUST be set and
+        // result must be exactly `simple_shift | 1`. Otherwise, no sticky bit is allowed.
+        if shifted_out != 0 {
+            assert(result == (simple_shift | 1));
+            assert(result & 1 == 1);
+        } else {
+            assert(result == simple_shift);
         }
     } else {
         // shift == 0, result should equal value
@@ -242,11 +246,13 @@ pub fn count_leading_zeros_u23_verified(value: u32) -> u32 {
         assert(bit == 1);
     }
 
-    // Verification: If count > 0, bit at position (23 - count) must be 0 (if it exists)
+    // Verification: If 0 < count < 23, all bits more significant than (22 - count)
+    // must be 0. Shifting right by (23 - count) moves these high bits to LSB positions.
+    // This ensures count is uniquely determined.
     if (count > 0) & (count < 23) {
-        let prev_bit_pos = (23 - count) as u8;
-        let prev_bit = (value_masked >> prev_bit_pos) & 1;
-        assert(prev_bit == 0);
+        let high_bits_shift = (23 - count) as u8;
+        let high_bits = value_masked >> high_bits_shift;
+        assert(high_bits == 0);
     }
 
     count
@@ -330,11 +336,13 @@ pub fn count_leading_zeros_u52_verified(value: u64) -> u64 {
         assert(bit == 1);
     }
 
-    // Verification: If count > 0, bit at position (52 - count) must be 0 (if it exists)
+    // Verification: If 0 < count < 52, all bits more significant than (51 - count)
+    // must be 0. Shifting right by (52 - count) moves these high bits to LSB positions.
+    // This ensures count is uniquely determined.
     if (count > 0) & (count < 52) {
-        let prev_bit_pos = (52 - count) as u8;
-        let prev_bit = (value_masked >> prev_bit_pos) & 1;
-        assert(prev_bit == 0);
+        let high_bits_shift = (52 - count) as u8;
+        let high_bits = value_masked >> high_bits_shift;
+        assert(high_bits == 0);
     }
 
     count

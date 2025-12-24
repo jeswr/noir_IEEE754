@@ -287,9 +287,11 @@ ieee754/src/
 - Safety comments on all `unsafe` blocks explaining verification strategy
 
 **Modified**:
-- All arithmetic operations now use verified unconstrained functions
+- Float32 arithmetic operations now use verified unconstrained functions for both leading zero counting and sticky shifts
+- Float64 arithmetic operations are partially updated: some shift operations use `shift_right_sticky_u64_verified`, while leading zero counting still uses inline logic in most operations
 - All shift amounts cast to `u8` (Noir requirement)
-- Import statements updated to use `unconstrained_ops` module
+- Import statements for float32 modules updated to use the `unconstrained_ops` module
+- Float64 modules have imports added but leading zero counting functions are not yet fully utilized
 
 **Preserved**:
 - All existing functionality unchanged
@@ -300,20 +302,36 @@ ieee754/src/
 
 ### Estimated Gate Reduction
 
-Per IEEE 754 operation (add, sub, mul, div, sqrt):
+**Note**: These estimates apply primarily to Float32 operations, which have been fully optimized. Float64 operations are only partially optimized and will see less improvement.
+
+Per Float32 IEEE 754 operation (add, sub, mul, div, sqrt):
 
 | Component | Before | After | Reduction |
 |-----------|--------|-------|-----------|
 | Leading zero count (4-6 calls) | 80-180 gates | 12-30 gates | ~6-10x |
 | Sticky shifts (2-4 calls) | 20-60 gates | 6-20 gates | ~3-5x |
-| **Total per operation** | **100-240 gates** | **18-50 gates** | **~5-7x** |
+| **Total per Float32 operation** | **100-240 gates** | **18-50 gates** | **~5-7x** |
+
+Per Float64 IEEE 754 operation (partial optimization):
+
+| Component | Before | After | Reduction |
+|-----------|--------|-------|-----------|
+| Leading zero count (4-6 calls) | 80-180 gates | 80-180 gates (not optimized) | ~1x |
+| Sticky shifts (2-4 calls) | 20-60 gates | 6-20 gates | ~3-5x |
+| **Total per Float64 operation** | **100-240 gates** | **86-200 gates** | **~1.2-1.5x** |
 
 ### Expected Benefits
 
+**For Float32 operations (fully optimized)**:
 - **Proof generation**: ~5-7x faster for floating-point operations
 - **Memory usage**: ~5-7x lower for circuit compilation
 - **Proof size**: Unchanged (determined by public inputs/outputs)
 - **Security**: Identical to fully constrained approach
+
+**For Float64 operations (partially optimized)**:
+- **Proof generation**: ~1.2-1.5x faster (only shift operations optimized)
+- **Memory usage**: ~1.2-1.5x lower for circuit compilation
+- **Further optimization needed**: Leading zero counting still uses inline binary search
 
 ## Testing & Validation
 
