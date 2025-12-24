@@ -7,6 +7,7 @@ use crate::float32::helpers::{
     float32_nan, float32_zero,
 };
 use crate::types::{FLOAT32_EXPONENT_MAX, FLOAT32_IMPLICIT_BIT, IEEE754Float32};
+use crate::unconstrained_ops::{count_leading_zeros_u64_verified, shift_right_sticky_u64_verified};
 
 // IEEE 754 compliant addition for 32-bit floats
 pub fn add_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
@@ -46,29 +47,11 @@ pub fn add_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
 
     if exp_a_eff > exp_b_eff {
         let shift = exp_a_eff - exp_b_eff;
-        if shift >= 64 {
-            mant_b = if mant_b != 0 { 1 } else { 0 };
-        } else {
-            let mask = (1 << shift) - 1;
-            let sticky = mant_b & mask;
-            mant_b = mant_b >> shift;
-            if sticky != 0 {
-                mant_b = mant_b | 1;
-            }
-        }
+        mant_b = shift_right_sticky_u64_verified(mant_b, shift);
         result_exp = exp_a_eff;
     } else if exp_b_eff > exp_a_eff {
         let shift = exp_b_eff - exp_a_eff;
-        if shift >= 64 {
-            mant_a = if mant_a != 0 { 1 } else { 0 };
-        } else {
-            let mask = (1 << shift) - 1;
-            let sticky = mant_a & mask;
-            mant_a = mant_a >> shift;
-            if sticky != 0 {
-                mant_a = mant_a | 1;
-            }
-        }
+        mant_a = shift_right_sticky_u64_verified(mant_a, shift);
         result_exp = exp_b_eff;
     }
 
@@ -90,40 +73,15 @@ pub fn add_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     // Overflow normalization
     let overflow_threshold: u64 = (FLOAT32_IMPLICIT_BIT as u64) << 4;
     if result_mant >= overflow_threshold {
-        let sticky = result_mant & 1;
-        result_mant = (result_mant >> 1) | sticky;
+        result_mant = shift_right_sticky_u64_verified(result_mant, 1);
         result_exp = result_exp + 1;
     }
 
-    // Underflow normalization using binary search for leading zeros
+    // Underflow normalization using optimized leading zero count
     let normal_position: u64 = (FLOAT32_IMPLICIT_BIT as u64) << 3;
     if (result_mant != 0) & (result_mant < normal_position) {
         let target_bit: u64 = 26;
-        let mut leading_zeros: u64 = 0;
-        let mut v = result_mant;
-        if v & 0xFFFFFFFF00000000 == 0 {
-            leading_zeros += 32;
-            v <<= 32;
-        }
-        if v & 0xFFFF000000000000 == 0 {
-            leading_zeros += 16;
-            v <<= 16;
-        }
-        if v & 0xFF00000000000000 == 0 {
-            leading_zeros += 8;
-            v <<= 8;
-        }
-        if v & 0xF000000000000000 == 0 {
-            leading_zeros += 4;
-            v <<= 4;
-        }
-        if v & 0xC000000000000000 == 0 {
-            leading_zeros += 2;
-            v <<= 2;
-        }
-        if v & 0x8000000000000000 == 0 {
-            leading_zeros += 1;
-        }
+        let leading_zeros = count_leading_zeros_u64_verified(result_mant);
 
         let shift_needed = leading_zeros - (64 - target_bit - 1);
         let max_shift = if result_exp > 1 { result_exp - 1 } else { 0 };
@@ -133,7 +91,7 @@ pub fn add_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
             max_shift
         };
 
-        result_mant = result_mant << actual_shift;
+        result_mant = result_mant << (actual_shift as u8);
         result_exp = result_exp - actual_shift;
     }
 

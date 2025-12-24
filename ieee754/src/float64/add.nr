@@ -7,6 +7,7 @@ use crate::float64::helpers::{
     float64_nan, float64_zero,
 };
 use crate::types::{FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64};
+use crate::unconstrained_ops::shift_right_sticky_u64_verified;
 
 // IEEE 754 compliant addition for 64-bit doubles
 pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
@@ -53,9 +54,9 @@ pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
             sticky_b = if mant_b != 0 { 1 } else { 0 };
             mant_b = 0;
         } else {
-            let mask = (1 << shift_amount) - 1;
+            let mask = (1 << (shift_amount as u8)) - 1;
             let shifted_out = mant_b & mask;
-            mant_b = mant_b >> shift_amount;
+            mant_b = mant_b >> (shift_amount as u8);
             if shifted_out != 0 {
                 sticky_b = 1;
             }
@@ -67,9 +68,9 @@ pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
             sticky_a = if mant_a != 0 { 1 } else { 0 };
             mant_a = 0;
         } else {
-            let mask = (1 << shift_amount) - 1;
+            let mask = (1 << (shift_amount as u8)) - 1;
             let shifted_out = mant_a & mask;
-            mant_a = mant_a >> shift_amount;
+            mant_a = mant_a >> (shift_amount as u8);
             if shifted_out != 0 {
                 sticky_a = 1;
             }
@@ -166,7 +167,7 @@ pub fn add_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
             max_shift
         };
 
-        result_mant = result_mant << actual_shift;
+        result_mant = result_mant << (actual_shift as u8);
         result_exp = result_exp - actual_shift;
     }
 

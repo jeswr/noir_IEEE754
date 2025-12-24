@@ -15,7 +15,8 @@ use crate::float64::helpers::{
     float64_nan, float64_zero,
 };
 use crate::types::{FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64};
-use crate::utils::{shift_right_sticky_u64, U128};
+use crate::unconstrained_ops::{count_leading_zeros_u52_verified, shift_right_sticky_u64_verified};
+use crate::utils::U128;
 
 // IEEE 754 compliant square root for 64-bit floats
 pub fn sqrt_float64(a: IEEE754Float64) -> IEEE754Float64 {
@@ -60,7 +61,7 @@ pub fn sqrt_float64(a: IEEE754Float64) -> IEEE754Float64 {
 
     // Get mantissa with implicit bit (53 bits, implicit at position 52)
     let mant_a: u64 = if a_is_denormal {
-        a_mant_raw << (a_lz as u64)
+        a_mant_raw << (a_lz as u8)
     } else {
         a.mantissa | FLOAT64_IMPLICIT_BIT
     };
@@ -97,8 +98,8 @@ pub fn sqrt_float64(a: IEEE754Float64) -> IEEE754Float64 {
     let radicand_shift: u64 = 58;
 
     // Create 128-bit radicand
-    let radicand_high: u64 = adjusted_mant >> (64 - radicand_shift);
-    let radicand_low: u64 = adjusted_mant << radicand_shift;
+    let radicand_high: u64 = adjusted_mant >> ((64 - radicand_shift) as u8);
+    let radicand_low: u64 = adjusted_mant << (radicand_shift as u8);
 
     // Digit-by-digit square root algorithm (binary restoring method) for up to 112-bit input
     // Computes floor(sqrt(radicand)) by processing 2 bits at a time
@@ -118,9 +119,9 @@ pub fn sqrt_float64(a: IEEE754Float64) -> IEEE754Float64 {
         // bit position: 110 - 2*i for the pair (starts at bits 110-111, ends at 0-1)
         let shift_pos: i64 = 110 - 2 * (i as i64);
         let two_bits: u64 = if shift_pos >= 64 {
-            (radicand_high >> ((shift_pos - 64) as u64)) & 3
+            (radicand_high >> ((shift_pos - 64) as u8)) & 3
         } else if shift_pos >= 0 {
-            (radicand_low >> (shift_pos as u64)) & 3
+            (radicand_low >> (shift_pos as u8)) & 3
         } else {
             0
         };
@@ -166,7 +167,7 @@ pub fn sqrt_float64(a: IEEE754Float64) -> IEEE754Float64 {
     if result_exp <= 0 {
         let denorm_shift = 1 - result_exp;
         if denorm_shift < 57 {
-            result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
+            result_mant = shift_right_sticky_u64_verified(result_mant, denorm_shift as u64);
         } else {
             result_mant = 0;
         }

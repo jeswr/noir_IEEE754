@@ -7,7 +7,10 @@ use crate::float32::helpers::{
     float32_nan, float32_zero,
 };
 use crate::types::{FLOAT32_EXPONENT_MAX, FLOAT32_IMPLICIT_BIT, IEEE754Float32};
-use crate::utils::shift_right_sticky_u64;
+use crate::unconstrained_ops::{
+    count_leading_zeros_u23_verified, count_leading_zeros_u64_verified,
+    shift_right_sticky_u64_verified,
+};
 
 // IEEE 754 compliant multiplication for 32-bit floats
 pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
@@ -32,63 +35,23 @@ pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     // Goal: find shift amount to put highest set bit at position 23 (implicit bit position)
     // This equals (23 - highest_bit_position) = leading_zeros_from_bit22 + 1
     let a_mant_raw: u64 = a.mantissa as u64;
-    let mut a_lz: i64 = 0;
-    if a_is_denormal & (a_mant_raw != 0) {
-        let mut v = a_mant_raw;
-        // Binary search for leading zeros relative to bit 22
-        if (v & 0x7FF800) == 0 {
-            a_lz = a_lz + 12;
-            v = v << 12;
-        } // bits 11-22
-        if (v & 0x7E0000) == 0 {
-            a_lz = a_lz + 6;
-            v = v << 6;
-        } // bits 17-22
-        if (v & 0x700000) == 0 {
-            a_lz = a_lz + 3;
-            v = v << 3;
-        } // bits 20-22
-        if (v & 0x600000) == 0 {
-            a_lz = a_lz + 2;
-            v = v << 2;
-        } // bits 21-22
-        if (v & 0x400000) == 0 {
-            a_lz = a_lz + 1;
-        } // bit 22
-        // Add 1 to get shift to position 23
-        a_lz = a_lz + 1;
-    }
+    let a_lz: i64 = if a_is_denormal & (a_mant_raw != 0) {
+        (count_leading_zeros_u23_verified(a.mantissa) as i64) + 1
+    } else {
+        0
+    };
 
     let b_mant_raw: u64 = b.mantissa as u64;
-    let mut b_lz: i64 = 0;
-    if b_is_denormal & (b_mant_raw != 0) {
-        let mut v = b_mant_raw;
-        if (v & 0x7FF800) == 0 {
-            b_lz = b_lz + 12;
-            v = v << 12;
-        }
-        if (v & 0x7E0000) == 0 {
-            b_lz = b_lz + 6;
-            v = v << 6;
-        }
-        if (v & 0x700000) == 0 {
-            b_lz = b_lz + 3;
-            v = v << 3;
-        }
-        if (v & 0x600000) == 0 {
-            b_lz = b_lz + 2;
-            v = v << 2;
-        }
-        if (v & 0x400000) == 0 {
-            b_lz = b_lz + 1;
-        }
-        b_lz = b_lz + 1;
-    }
+    let b_lz: i64 = if b_is_denormal & (b_mant_raw != 0) {
+        (count_leading_zeros_u23_verified(b.mantissa) as i64) + 1
+    } else {
+        0
+    };
 
     // Get effective mantissas with implicit bit (24 bits)
     // For denormals, shift to normalize (put highest bit at position 23)
     let mant_a: u64 = if a_is_denormal {
-        a_mant_raw << (a_lz as u64)
+        a_mant_raw << (a_lz as u8)
     } else if a_is_zero {
         0
     } else {
@@ -96,7 +59,7 @@ pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     };
 
     let mant_b: u64 = if b_is_denormal {
-        b_mant_raw << (b_lz as u64)
+        b_mant_raw << (b_lz as u8)
     } else if b_is_zero {
         0
     } else {
@@ -149,42 +112,18 @@ pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     if bit_47_set {
         result_exp = result_exp + 1;
         // Shift right by 1, keeping sticky bit
-        result_mant = shift_right_sticky_u64(product, 1);
+        result_mant = shift_right_sticky_u64_verified(product, 1);
     }
 
     // Now normalize if the leading bit is below position 46
-    // Use binary search to count leading zeros
+    // Use optimized leading zero count
     if (result_mant != 0) & ((result_mant >> 46) == 0) {
         let target_bit: u64 = 46;
-        let mut leading_zeros: u64 = 0;
-        let mut v = result_mant;
-        if v & 0xFFFFFFFF00000000 == 0 {
-            leading_zeros += 32;
-            v <<= 32;
-        }
-        if v & 0xFFFF000000000000 == 0 {
-            leading_zeros += 16;
-            v <<= 16;
-        }
-        if v & 0xFF00000000000000 == 0 {
-            leading_zeros += 8;
-            v <<= 8;
-        }
-        if v & 0xF000000000000000 == 0 {
-            leading_zeros += 4;
-            v <<= 4;
-        }
-        if v & 0xC000000000000000 == 0 {
-            leading_zeros += 2;
-            v <<= 2;
-        }
-        if v & 0x8000000000000000 == 0 {
-            leading_zeros += 1;
-        }
+        let leading_zeros = count_leading_zeros_u64_verified(result_mant);
 
         // shift_needed = leading_zeros - (64 - target_bit - 1) = leading_zeros - 17
         let shift_needed = leading_zeros - (64 - target_bit - 1);
-        result_mant = result_mant << shift_needed;
+        result_mant = result_mant << (shift_needed as u8);
         result_exp = result_exp - (shift_needed as i64);
     }
 
@@ -192,7 +131,7 @@ pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     // We need to shift down to position 23, but keep 3 guard bits
     // So shift from position 46 to position 26 (46 - 26 = 20)
     let guard_shift: u64 = 46 - 26;
-    result_mant = shift_right_sticky_u64(result_mant, guard_shift);
+    result_mant = shift_right_sticky_u64_verified(result_mant, guard_shift);
 
     // Handle underflow to denormal BEFORE rounding
     // We need to shift the mantissa (which still has 3 guard bits at positions 0-2)
@@ -205,7 +144,7 @@ pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
         let denorm_shift = 1 - result_exp;
         if denorm_shift < 27 {
             // Shift right, preserving sticky bits
-            result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
+            result_mant = shift_right_sticky_u64_verified(result_mant, denorm_shift as u64);
         } else {
             result_mant = 0;
         }

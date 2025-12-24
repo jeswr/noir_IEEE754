@@ -15,7 +15,7 @@ use crate::float32::helpers::{
     float32_nan, float32_zero,
 };
 use crate::types::{FLOAT32_EXPONENT_MAX, FLOAT32_IMPLICIT_BIT, IEEE754Float32};
-use crate::utils::shift_right_sticky_u64;
+use crate::unconstrained_ops::shift_right_sticky_u64_verified;
 
 // IEEE 754 compliant square root for 32-bit floats
 pub fn sqrt_float32(a: IEEE754Float32) -> IEEE754Float32 {
@@ -56,7 +56,7 @@ pub fn sqrt_float32(a: IEEE754Float32) -> IEEE754Float32 {
 
     // Get mantissa with implicit bit (24 bits, implicit at position 23)
     let mant_a: u64 = if a_is_denormal {
-        a_mant_raw << (a_lz as u64)
+        a_mant_raw << (a_lz as u8)
     } else {
         (a.mantissa | FLOAT32_IMPLICIT_BIT) as u64
     };
@@ -120,7 +120,7 @@ pub fn sqrt_float32(a: IEEE754Float32) -> IEEE754Float32 {
         // Shift remainder left by 2 and add next two bits from radicand
         let shift_pos = 52 - 2 * i; // Starts at 52, goes to 0
         let two_bits = if shift_pos >= 0 {
-            (radicand >> (shift_pos as u64)) & 3
+            (radicand >> (shift_pos as u8)) & 3
         } else {
             0
         };
@@ -155,7 +155,7 @@ pub fn sqrt_float32(a: IEEE754Float32) -> IEEE754Float32 {
     if result_exp <= 0 {
         let denorm_shift = 1 - result_exp;
         if denorm_shift < 27 {
-            result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
+            result_mant = shift_right_sticky_u64_verified(result_mant, denorm_shift as u64);
         } else {
             result_mant = 0;
         }
