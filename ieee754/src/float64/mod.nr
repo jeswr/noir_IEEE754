@@ -15,24 +15,34 @@ pub use helpers::{
     float64_is_zero, float64_nan, float64_to_bits, float64_zero,
 };
 
-pub use add::add_float64;
+pub use add::{add_float64, add_float64_with_rounding};
 pub use cmp::{
     float64_compare, float64_eq, float64_ge, float64_gt, float64_le, float64_lt, float64_ne,
     float64_unordered,
 };
-pub use div::div_float64;
-pub use mul::mul_float64;
-pub use sqrt::sqrt_float64;
+pub use div::{div_float64, div_float64_with_rounding};
+pub use mul::{mul_float64, mul_float64_with_rounding};
+pub use sqrt::{sqrt_float64, sqrt_float64_with_rounding};
 
 // Subtraction is implemented as a + (-b)
-use crate::types::IEEE754Float64;
+use crate::types::{IEEE754Float64, ROUNDING_MODE_NEAREST_EVEN};
 
-// IEEE 754 compliant subtraction for 64-bit floats
+// IEEE 754 compliant subtraction for 64-bit floats with rounding mode
 // Implemented as a + (-b)
-pub fn sub_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
+pub fn sub_float64_with_rounding(
+    a: IEEE754Float64,
+    b: IEEE754Float64,
+    rounding_mode: u8,
+) -> IEEE754Float64 {
     // Negate b's sign and add
     let neg_b = IEEE754Float64 { sign: 1 - b.sign, exponent: b.exponent, mantissa: b.mantissa };
-    add_float64(a, neg_b)
+    add_float64_with_rounding(a, neg_b, rounding_mode)
+}
+
+// IEEE 754 compliant subtraction for 64-bit floats (default rounding mode)
+// Backward-compatible wrapper that uses round-to-nearest-ties-to-even
+pub fn sub_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
+    sub_float64_with_rounding(a, b, ROUNDING_MODE_NEAREST_EVEN)
 }
 
 // IEEE 754 compliant absolute value for 64-bit floats
