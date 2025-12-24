@@ -15,7 +15,7 @@ use crate::utils::{shift_right_sticky_u64, should_round_up_4bit};
 pub fn div_float32_with_rounding(
     a: IEEE754Float32,
     b: IEEE754Float32,
-    rounding_mode: u8
+    rounding_mode: u8,
 ) -> IEEE754Float32 {
     // Determine special cases
     let a_is_nan = float32_is_nan(a);

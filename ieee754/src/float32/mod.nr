@@ -32,7 +32,7 @@ use crate::types::{IEEE754Float32, ROUNDING_MODE_NEAREST_EVEN};
 pub fn sub_float32_with_rounding(
     a: IEEE754Float32,
     b: IEEE754Float32,
-    rounding_mode: u8
+    rounding_mode: u8,
 ) -> IEEE754Float32 {
     // Negate b's sign and add
     let neg_b = IEEE754Float32 { sign: 1 - b.sign, exponent: b.exponent, mantissa: b.mantissa };

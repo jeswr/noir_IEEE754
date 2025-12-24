@@ -15,7 +15,7 @@ use crate::utils::should_round_up;
 pub fn add_float32_with_rounding(
     a: IEEE754Float32,
     b: IEEE754Float32,
-    rounding_mode: u8
+    rounding_mode: u8,
 ) -> IEEE754Float32 {
     let a_is_nan = float32_is_nan(a);
     let b_is_nan = float32_is_nan(b);

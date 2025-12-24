@@ -2,11 +2,11 @@
 // Shared Utility Functions for IEEE 754 Operations
 // ============================================================================
 
-use std::ops::WrappingAdd;
 use crate::types::{
-    ROUNDING_MODE_NEAREST_EVEN, ROUNDING_MODE_NEAREST_AWAY, ROUNDING_MODE_TOWARD_POSITIVE,
-    ROUNDING_MODE_TOWARD_NEGATIVE, ROUNDING_MODE_TOWARD_ZERO,
+    ROUNDING_MODE_NEAREST_AWAY, ROUNDING_MODE_NEAREST_EVEN, ROUNDING_MODE_TOWARD_NEGATIVE,
+    ROUNDING_MODE_TOWARD_POSITIVE, ROUNDING_MODE_TOWARD_ZERO,
 };
+use std::ops::WrappingAdd;
 
 // Helper to shift right with sticky bit preservation for u64
 pub fn shift_right_sticky_u64(value: u64, shift: u64) -> u64 {
@@ -179,7 +179,7 @@ pub fn div_u128_by_u64(dividend: U128, divisor: u64) -> (u64, u64) {
 // ============================================================================
 
 /// Determine if a value should round up based on guard bits and rounding mode
-/// 
+///
 /// # Arguments
 /// * `guard_bits` - The guard, round, and sticky bits (typically 3 bits: GRS)
 /// * `result_mant` - The mantissa after shifting out guard bits
@@ -192,16 +192,16 @@ pub fn should_round_up(guard_bits: u64, result_mant: u64, result_sign: u1, mode:
     // Guard bit position varies by operation, but for standard 3-bit guard:
     // Bits 2-0: Guard(2), Round(1), Sticky(0)
     // guard_bits = GRS as 0bGRS (value 0-7)
-    
+
     let is_positive = result_sign == 0;
     let is_negative = result_sign == 1;
-    
+
     // Check if we're exactly at the midpoint (R=1, S=0)
     let at_midpoint = (guard_bits & 0x3) == 0x2; // R=1, S=0
-    
+
     // Check if we're above the midpoint (R=1, S=1) or (R=0 but G=1 and something beyond)
     let above_midpoint = guard_bits > 4; // More than just G=1
-    
+
     if mode == ROUNDING_MODE_NEAREST_EVEN {
         // Round to nearest, ties to even
         // Round up if: above midpoint OR (at midpoint AND result is odd)
@@ -229,7 +229,7 @@ pub fn should_round_up(guard_bits: u64, result_mant: u64, result_sign: u1, mode:
 
 /// Determine if a value should round up based on guard bits and rounding mode (4-bit version)
 /// This version is for operations that use 4 guard bits (like division)
-/// 
+///
 /// # Arguments
 /// * `guard_bits` - The guard bits (4 bits: GRSS where G=guard, R=round, S=sticky bits)
 /// * `result_mant` - The mantissa after shifting out guard bits
@@ -242,16 +242,16 @@ pub fn should_round_up_4bit(guard_bits: u64, result_mant: u64, result_sign: u1, 
     // For 4-bit guard: Bits 3-0: G(3), R(2), S(1), S(0)
     // guard_bits = GRSS (value 0-15)
     // Midpoint is at 0b1000 = 8
-    
+
     let is_positive = result_sign == 0;
     let is_negative = result_sign == 1;
-    
+
     // Check if we're exactly at the midpoint (guard_bits == 8, which is 0b1000)
     let at_midpoint = guard_bits == 8;
-    
+
     // Check if we're above the midpoint
     let above_midpoint = guard_bits > 8;
-    
+
     if mode == ROUNDING_MODE_NEAREST_EVEN {
         // Round to nearest, ties to even
         // Round up if: above midpoint OR (at midpoint AND result is odd)
@@ -271,6 +271,47 @@ pub fn should_round_up_4bit(guard_bits: u64, result_mant: u64, result_sign: u1, 
     } else {
         // ROUNDING_MODE_TOWARD_ZERO
         // Never round up (always truncate)
+        false
+    }
+}
+
+/// Determine if a value should round up based on guard bits and rounding mode (8-bit version)
+/// This version is for operations that use 8 guard bits (like float64 addition)
+///
+/// # Arguments
+/// * `guard_bits` - The guard bits (8 bits)
+/// * `result_mant` - The mantissa after shifting out guard bits
+/// * `result_sign` - The sign of the result (0 = positive, 1 = negative)
+/// * `mode` - The rounding mode to use (use ROUNDING_MODE_* constants)
+///
+/// # Returns
+/// * `true` if the mantissa should be incremented, `false` otherwise
+pub fn should_round_up_8bit(guard_bits: u64, result_mant: u64, result_sign: u1, mode: u8) -> bool {
+    // For 8-bit guard: midpoint is at 0x80 = 128
+
+    let is_positive = result_sign == 0;
+    let is_negative = result_sign == 1;
+
+    // Check if we're exactly at the midpoint
+    let at_midpoint = guard_bits == 0x80;
+
+    // Check if we're above the midpoint
+    let above_midpoint = guard_bits > 0x80;
+
+    if mode == ROUNDING_MODE_NEAREST_EVEN {
+        // Round to nearest, ties to even
+        above_midpoint | (at_midpoint & ((result_mant & 1) == 1))
+    } else if mode == ROUNDING_MODE_NEAREST_AWAY {
+        // Round to nearest, ties away from zero
+        above_midpoint | at_midpoint
+    } else if mode == ROUNDING_MODE_TOWARD_POSITIVE {
+        // Round toward +Infinity (ceiling)
+        is_positive & (guard_bits != 0)
+    } else if mode == ROUNDING_MODE_TOWARD_NEGATIVE {
+        // Round toward -Infinity (floor)
+        is_negative & (guard_bits != 0)
+    } else {
+        // ROUNDING_MODE_TOWARD_ZERO
         false
     }
 }
