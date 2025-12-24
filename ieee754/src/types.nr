@@ -2,6 +2,15 @@
 // IEEE 754 Compliant Floating Point Types
 // ============================================================================
 
+// IEEE 754 Rounding Modes
+// As defined in IEEE 754-2019 Section 4.3
+// Using u8 constants instead of enums for better stability
+pub global ROUNDING_MODE_NEAREST_EVEN: u8 = 0; // Round to nearest, ties to even (default) - =0 in fptest
+pub global ROUNDING_MODE_NEAREST_AWAY: u8 = 1; // Round to nearest, ties away from zero - =^ in fptest
+pub global ROUNDING_MODE_TOWARD_POSITIVE: u8 = 2; // Round toward +Infinity (ceiling) - > in fptest
+pub global ROUNDING_MODE_TOWARD_NEGATIVE: u8 = 3; // Round toward -Infinity (floor) - < in fptest
+pub global ROUNDING_MODE_TOWARD_ZERO: u8 = 4; // Round toward 0 (truncate) - 0 in fptest
+
 // IEEE 754 Single-Precision (32-bit) Float
 // - 1 bit sign
 // - 8 bits exponent (bias 127)

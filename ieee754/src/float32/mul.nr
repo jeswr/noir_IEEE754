@@ -6,7 +6,6 @@ use crate::float32::helpers::{
     float32_infinity, float32_is_denormal, float32_is_infinity, float32_is_nan, float32_is_zero,
     float32_nan, float32_zero,
 };
-use crate::types::{FLOAT32_EXPONENT_MAX, FLOAT32_IMPLICIT_BIT, IEEE754Float32};
 use crate::unconstrained_ops::{
     count_leading_zeros_u23_verified, count_leading_zeros_u64_verified,
     shift_right_sticky_u64_verified,
@@ -14,6 +13,17 @@ use crate::unconstrained_ops::{
 
 // IEEE 754 compliant multiplication for 32-bit floats
 pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
+use crate::types::{
+    FLOAT32_EXPONENT_MAX, FLOAT32_IMPLICIT_BIT, IEEE754Float32, ROUNDING_MODE_NEAREST_EVEN,
+};
+use crate::utils::{shift_right_sticky_u64, should_round_up};
+
+// IEEE 754 compliant multiplication for 32-bit floats with rounding mode
+pub fn mul_float32_with_rounding(
+    a: IEEE754Float32,
+    b: IEEE754Float32,
+    rounding_mode: u8,
+) -> IEEE754Float32 {
     // Determine special cases
     let a_is_nan = float32_is_nan(a);
     let b_is_nan = float32_is_nan(b);
@@ -157,8 +167,13 @@ pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     let guard_bits = result_mant & 0x7;
     result_mant = result_mant >> 3;
 
-    let should_round_up = (guard_bits > 4) | ((guard_bits == 4) & ((result_mant & 1) == 1));
-    if should_round_up {
+    let should_round = if rounding_mode == 0 {
+        // NEAREST_EVEN (optimized inline)
+        (guard_bits > 4) | ((guard_bits == 4) & ((result_mant & 1) == 1))
+    } else {
+        should_round_up(guard_bits, result_mant, result_sign, rounding_mode)
+    };
+    if should_round {
         result_mant = result_mant + 1;
         // Check for overflow from rounding
         if !is_denormal_result & (result_mant >= ((FLOAT32_IMPLICIT_BIT as u64) << 1)) {
@@ -224,4 +239,10 @@ pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     }
 
     result
+}
+
+// IEEE 754 compliant multiplication for 32-bit floats (default rounding mode)
+// Backward-compatible wrapper that uses round-to-nearest-ties-to-even
+pub fn mul_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
+    mul_float32_with_rounding(a, b, ROUNDING_MODE_NEAREST_EVEN)
 }

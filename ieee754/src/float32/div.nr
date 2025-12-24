@@ -6,11 +6,21 @@ use crate::float32::helpers::{
     float32_infinity, float32_is_denormal, float32_is_infinity, float32_is_nan, float32_is_zero,
     float32_nan, float32_zero,
 };
-use crate::types::{FLOAT32_EXPONENT_MAX, FLOAT32_IMPLICIT_BIT, IEEE754Float32};
 use crate::unconstrained_ops::{count_leading_zeros_u23_verified, shift_right_sticky_u64_verified};
 
 // IEEE 754 compliant division for 32-bit floats
 pub fn div_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
+use crate::types::{
+    FLOAT32_EXPONENT_MAX, FLOAT32_IMPLICIT_BIT, IEEE754Float32, ROUNDING_MODE_NEAREST_EVEN,
+};
+use crate::utils::{shift_right_sticky_u64, should_round_up_4bit};
+
+// IEEE 754 compliant division for 32-bit floats with rounding mode
+pub fn div_float32_with_rounding(
+    a: IEEE754Float32,
+    b: IEEE754Float32,
+    rounding_mode: u8,
+) -> IEEE754Float32 {
     // Determine special cases
     let a_is_nan = float32_is_nan(a);
     let b_is_nan = float32_is_nan(b);
@@ -192,8 +202,13 @@ pub fn div_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     result_mant = result_mant >> 4;
 
     // Round to nearest, ties to even (using 4-bit guard, threshold is 8)
-    let should_round_up = (guard_bits > 8) | ((guard_bits == 8) & ((result_mant & 1) == 1));
-    if should_round_up {
+    let should_round = if rounding_mode == 0 {
+        // NEAREST_EVEN (optimized inline)
+        (guard_bits > 8) | ((guard_bits == 8) & ((result_mant & 1) == 1))
+    } else {
+        should_round_up_4bit(guard_bits, result_mant, result_sign, rounding_mode)
+    };
+    if should_round {
         result_mant = result_mant + 1;
         // Check for overflow from rounding
         if !is_denormal_result & (result_mant >= ((FLOAT32_IMPLICIT_BIT as u64) << 1)) {
@@ -262,4 +277,10 @@ pub fn div_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
     }
 
     result
+}
+
+// IEEE 754 compliant division for 32-bit floats (default rounding mode)
+// Backward-compatible wrapper that uses round-to-nearest-ties-to-even
+pub fn div_float32(a: IEEE754Float32, b: IEEE754Float32) -> IEEE754Float32 {
+    div_float32_with_rounding(a, b, ROUNDING_MODE_NEAREST_EVEN)
 }

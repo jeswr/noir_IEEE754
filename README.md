@@ -9,8 +9,8 @@ IEEE 754 compliant floating-point arithmetic library for [Noir](https://noir-lan
 > **AI-Generated Code**: This library is **largely AI-generated**. While it has been tested against the IBM FPgen test suite, there may be edge cases or subtle bugs that have not been discovered.
 
 > [!NOTE]
-> **Test Coverage Limitations**: The following IEEE 754 test cases are skipped:
-> - **Non-default rounding modes**: Only "round to nearest, ties to even" (`=0`) is supported. Tests using round toward +∞ (`>`), -∞ (`<`), zero (`0`), or nearest away (`=^`) are skipped.
+> **Test Coverage Limitations**: The following IEEE 754 test cases are currently skipped:
+> - **Non-default rounding modes**: While all rounding modes are now implemented, the test suite currently only tests "round to nearest, ties to even" (`=0`). Tests for other modes (round toward +Infinity (`>`), -Infinity (`<`), zero (`0`), or nearest away (`=^`)) will be added in the future.
 > - **Non-binary operations**: FMA (`*+`) and remainder (`%`) operations are not implemented.
 > - **Comparison and square root operations**: Not tested with the IBM FPgen suite (only unit tests).
 > - **Known bad tests in IBM FPgen suite**: The test `b32/ =0 +1.2CEE1BP-64 +1.50EFBDP-30` from `Divide-Divide-By-Zero-Exception.fptest` is skipped due to an incorrect expected result in the test suite.
@@ -25,20 +25,20 @@ This library provides IEEE 754 standard floating-point operations in Noir, enabl
 - **IEEE 754 Float32** (single-precision): 1 sign bit, 8 exponent bits (bias 127), 23 mantissa bits
 - **IEEE 754 Float64** (double-precision): 1 sign bit, 11 exponent bits (bias 1023), 52 mantissa bits
 - Special value handling: ±Infinity, ±Zero, NaN, denormalized numbers
-- Rounding mode: Round to nearest, ties to even (default IEEE 754 rounding)
+- **Multiple rounding modes**: Round to nearest (ties to even), round toward +Infinity, round toward -Infinity, round toward zero, round to nearest (ties away from zero)
 - Bit-level conversion functions (`from_bits`, `to_bits`)
 
 ### Current Operations
 
-| Operation | Float32 | Float64 |
-|-----------|---------|---------|
-| Addition  | ✅       | ✅       |
-| Subtraction | ✅     | ✅      |
-| Multiplication | ✅  | ✅      |
-| Division | ✅       | ✅      |
-| Square Root | ✅     | ✅      |
-| Absolute Value | ✅   | ✅      |
-| Comparison (eq, ne, lt, le, gt, ge) | ✅ | ✅ |
+| Operation | Float32 | Float64 | Rounding Mode Support |
+|-----------|---------|---------|----------------------|
+| Addition  | ✅       | ✅       | ✅ |
+| Subtraction | ✅     | ✅      | ✅ |
+| Multiplication | ✅  | ✅      | ✅ |
+| Division | ✅       | ✅      | ✅ |
+| Square Root | ✅     | ✅      | ✅ |
+| Absolute Value | ✅   | ✅      | N/A (no rounding) |
+| Comparison (eq, ne, lt, le, gt, ge) | ✅ | ✅ | N/A (no rounding) |
 
 ## Installation
 
@@ -166,6 +166,45 @@ fn main() {
 }
 ```
 
+### Rounding Modes
+
+All arithmetic operations (addition, subtraction, multiplication, division, square root) support multiple IEEE 754 rounding modes:
+
+```noir
+use ieee754::float::{
+    float32_from_bits, float32_to_bits,
+    add_float32_with_rounding, mul_float32_with_rounding,
+    // Rounding mode constants
+    ROUNDING_MODE_NEAREST_EVEN,     // Round to nearest, ties to even (default)
+    ROUNDING_MODE_NEAREST_AWAY,     // Round to nearest, ties away from zero
+    ROUNDING_MODE_TOWARD_POSITIVE,  // Round toward +Infinity (ceiling)
+    ROUNDING_MODE_TOWARD_NEGATIVE,  // Round toward -Infinity (floor)
+    ROUNDING_MODE_TOWARD_ZERO       // Round toward zero (truncate)
+};
+
+fn main() {
+    let a = float32_from_bits(0x3F800000); // 1.0
+    let b = float32_from_bits(0x3EAAAAAB); // 0.333...
+    
+    // Default rounding (round to nearest, ties to even)
+    let result_default = add_float32(a, b);
+    
+    // Explicit rounding modes
+    let result_nearest = add_float32_with_rounding(a, b, ROUNDING_MODE_NEAREST_EVEN);
+    let result_ceiling = add_float32_with_rounding(a, b, ROUNDING_MODE_TOWARD_POSITIVE);
+    let result_floor = add_float32_with_rounding(a, b, ROUNDING_MODE_TOWARD_NEGATIVE);
+    let result_truncate = add_float32_with_rounding(a, b, ROUNDING_MODE_TOWARD_ZERO);
+    
+    // All operations have _with_rounding variants:
+    // add_float32_with_rounding, sub_float32_with_rounding,
+    // mul_float32_with_rounding, div_float32_with_rounding,
+    // sqrt_float32_with_rounding
+    // (and same for float64)
+}
+```
+
+**Note**: The default functions (`add_float32`, `mul_float32`, etc.) use `ROUNDING_MODE_NEAREST_EVEN` for backward compatibility.
+
 ### Helper Functions
 
 ```noir
@@ -210,14 +249,15 @@ The library implements IEEE 754 arithmetic for both float32 and float64 with ful
 - ✅ **Normalized numbers**: Standard floating-point values
 - ✅ **Denormalized (subnormal) numbers**: Gradual underflow handling
 - ✅ **Special values**: ±Zero, ±Infinity, NaN (quiet and signaling)
-- ✅ **Round-to-nearest, ties-to-even**: Default IEEE 754 rounding mode
+- ✅ **Multiple rounding modes**: Round to nearest (ties to even/away), toward +Infinity, toward -Infinity, toward zero
 - ✅ **Guard, round, and sticky bits**: For correct rounding during alignment shifts
 
 ### Next Steps
 
-1. **Support Multiple Rounding Modes**: Round toward +∞, -∞, zero
+1. ✅ **Support Multiple Rounding Modes**: Round toward +Infinity, -Infinity, zero _(Completed in Phase 1)_
 2. **Optimize Performance**: Reduce constraint count for ZK circuits
 3. **Add FMA operation**: `fma_float32`/`fma_float64`
+4. **Generate tests for all rounding modes**: Extend test generation script to cover all rounding modes
 
 ## Contributing
 
