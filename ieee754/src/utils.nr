@@ -19,9 +19,9 @@ pub fn shift_right_sticky_u64(value: u64, shift: u64) -> u64 {
             0
         }
     } else {
-        let mask = (1 << shift) - 1;
+        let mask = (1 << (shift as u8)) - 1;
         let shifted_out = value & mask;
-        let result = value >> shift;
+        let result = value >> (shift as u8);
         if shifted_out != 0 {
             result | 1
         } else {
@@ -73,9 +73,9 @@ pub fn mul_u64_to_u128(a: u64, b: u64) -> U128 {
     // low = p0 + (mid_sum & 0xFFFFFFFF) << 32
     let mid_lo_shifted = (mid_sum & 0xFFFFFFFF) << 32;
 
-    // Add p0 + mid_lo_shifted using wrapping arithmetic
+    // Add p0 + mid_lo_shifted - in Noir, addition wraps automatically
     // To detect carry: if result < p0 (or result < mid_lo_shifted), there was overflow
-    let low = p0.wrapping_add(mid_lo_shifted);
+    let low = p0 + mid_lo_shifted;
     let low_carry: u64 = if low < p0 { 1 } else { 0 };
 
     // high = p3 + (mid_sum >> 32) + (mid_carry << 32) + low_carry
@@ -104,9 +104,9 @@ pub fn shift_right_sticky_u128(val: U128, shift: u64) -> u64 {
                 0
             }
         } else {
-            let mask = (1 << effective_shift) - 1;
+            let mask = (1 << (effective_shift as u8)) - 1;
             let shifted_out = val.high & mask;
-            let result = val.high >> effective_shift;
+            let result = val.high >> (effective_shift as u8);
             if (shifted_out != 0) | (sticky != 0) {
                 result | 1
             } else {
@@ -115,9 +115,9 @@ pub fn shift_right_sticky_u128(val: U128, shift: u64) -> u64 {
         }
     } else {
         // shift < 64
-        let mask = (1 << shift) - 1;
+        let mask = (1 << (shift as u8)) - 1;
         let shifted_out = val.low & mask;
-        let result_low = (val.low >> shift) | (val.high << (64 - shift));
+        let result_low = (val.low >> (shift as u8)) | (val.high << ((64 - shift) as u8));
         if shifted_out != 0 {
             result_low | 1
         } else {
@@ -147,7 +147,7 @@ pub fn div_u128_by_u64(dividend: U128, divisor: u64) -> (u64, u64) {
         for i in 0..64 {
             let bit_pos = 63 - i;
             remainder = remainder << 1;
-            remainder = remainder | ((dividend.high >> (bit_pos as u64)) & 1);
+            remainder = remainder | ((dividend.high >> (bit_pos as u8)) & 1);
 
             if remainder >= divisor {
                 remainder = remainder - divisor;
@@ -161,7 +161,7 @@ pub fn div_u128_by_u64(dividend: U128, divisor: u64) -> (u64, u64) {
         for i in 0..64 {
             let bit_pos = 63 - i;
             remainder = remainder << 1;
-            remainder = remainder | ((dividend.low >> (bit_pos as u64)) & 1);
+            remainder = remainder | ((dividend.low >> (bit_pos as u8)) & 1);
 
             quotient = quotient << 1;
             if remainder >= divisor {

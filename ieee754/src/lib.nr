@@ -1,5 +1,6 @@
 pub mod types;
 pub mod utils;
+pub mod unconstrained_ops;
 pub mod float32;
 pub mod float64;
 pub mod float;

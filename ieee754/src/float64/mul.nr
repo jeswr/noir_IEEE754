@@ -6,6 +6,11 @@ use crate::float64::helpers::{
     float64_infinity, float64_is_denormal, float64_is_infinity, float64_is_nan, float64_is_zero,
     float64_nan, float64_zero,
 };
+use crate::unconstrained_ops::{
+    count_leading_zeros_u52_verified, count_leading_zeros_u64_verified,
+    shift_right_sticky_u64_verified,
+};
+use crate::utils::{mul_u64_to_u128, shift_right_sticky_u128};
 use crate::types::{
     FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64, ROUNDING_MODE_NEAREST_EVEN,
 };
@@ -103,7 +108,7 @@ pub fn mul_float64_with_rounding(
     // Get effective mantissas with implicit bit (53 bits)
     // For denormals, shift to normalize (put highest bit at position 52)
     let mant_a: u64 = if a_is_denormal {
-        a_mant_raw << (a_lz as u64)
+        a_mant_raw << (a_lz as u8)
     } else if a_is_zero {
         0
     } else {
@@ -111,7 +116,7 @@ pub fn mul_float64_with_rounding(
     };
 
     let mant_b: u64 = if b_is_denormal {
-        b_mant_raw << (b_lz as u64)
+        b_mant_raw << (b_lz as u8)
     } else if b_is_zero {
         0
     } else {
@@ -285,10 +290,11 @@ pub fn mul_float64_with_rounding(
                     // then shift left
                     let shift_left = (target_pos - leading_pos) as u64;
                     // Get bits from low part and shift left
-                    result_mant = product.low << shift_left;
-                    // Add bits from high if any overflow into the range
+                    result_mant = product.low << (shift_left as u8);
+                    // Add overflow bits from high part that shift into the range
                     if (product.high != 0) & (shift_left < 64) {
-                        result_mant = result_mant | (product.high << (shift_left + 64));
+                        // Shift high right to get the bits that overflow from low
+                        result_mant = result_mant | (product.high >> ((64 - shift_left) as u8));
                     }
                 }
             }
@@ -301,7 +307,7 @@ pub fn mul_float64_with_rounding(
     if result_exp <= 0 {
         let denorm_shift = 1 - result_exp;
         if denorm_shift < 56 {
-            result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
+            result_mant = shift_right_sticky_u64_verified(result_mant, denorm_shift as u64);
         } else {
             result_mant = 0;
         }

@@ -6,6 +6,11 @@ use crate::float64::helpers::{
     float64_infinity, float64_is_denormal, float64_is_infinity, float64_is_nan, float64_is_zero,
     float64_nan, float64_zero,
 };
+use crate::unconstrained_ops::{count_leading_zeros_u52_verified, shift_right_sticky_u64_verified};
+use crate::utils::{div_u128_by_u64, U128};
+
+// IEEE 754 compliant division for 64-bit floats
+pub fn div_float64(a: IEEE754Float64, b: IEEE754Float64) -> IEEE754Float64 {
 use crate::types::{
     FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64, ROUNDING_MODE_NEAREST_EVEN,
 };
@@ -100,7 +105,7 @@ pub fn div_float64_with_rounding(
     // Get effective mantissas with implicit bit (53 bits)
     // For denormals, shift to normalize (put highest bit at position 52)
     let mant_a: u64 = if a_is_denormal {
-        a_mant_raw << (a_lz as u64)
+        a_mant_raw << (a_lz as u8)
     } else if a_is_zero {
         0
     } else {
@@ -108,7 +113,7 @@ pub fn div_float64_with_rounding(
     };
 
     let mant_b: u64 = if b_is_denormal {
-        b_mant_raw << (b_lz as u64)
+        b_mant_raw << (b_lz as u8)
     } else if b_is_zero {
         0
     } else {
@@ -140,7 +145,7 @@ pub fn div_float64_with_rounding(
     // mant_a << 56 creates a 109-bit value
     let shift_amount: u64 = 56;
     let shifted_dividend =
-        U128 { high: mant_a >> (64 - shift_amount), low: mant_a << shift_amount };
+        U128 { high: mant_a >> ((64 - shift_amount) as u8), low: mant_a << (shift_amount as u8) };
 
     // Perform division
     let (quotient, remainder) = if mant_b != 0 {
@@ -161,7 +166,7 @@ pub fn div_float64_with_rounding(
     // Check if quotient >= 2^57 (result >= 2.0), need to shift right
     let bit_57_set = (quotient >> 57) & 1 == 1;
     if bit_57_set {
-        result_mant = shift_right_sticky_u64(quotient, 1);
+        result_mant = shift_right_sticky_u64_verified(quotient, 1);
         result_exp = result_exp + 1;
     }
 
@@ -187,7 +192,7 @@ pub fn div_float64_with_rounding(
     if result_exp <= 0 {
         let denorm_shift = 1 - result_exp;
         if denorm_shift < 57 {
-            result_mant = shift_right_sticky_u64(result_mant, denorm_shift as u64);
+            result_mant = shift_right_sticky_u64_verified(result_mant, denorm_shift as u64);
         } else {
             result_mant = 0;
         }

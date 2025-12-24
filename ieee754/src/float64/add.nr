@@ -6,6 +6,7 @@ use crate::float64::helpers::{
     float64_infinity, float64_is_denormal, float64_is_infinity, float64_is_nan, float64_is_zero,
     float64_nan, float64_zero,
 };
+use crate::unconstrained_ops::shift_right_sticky_u64_verified;
 use crate::types::{
     FLOAT64_EXPONENT_MAX, FLOAT64_IMPLICIT_BIT, IEEE754Float64, ROUNDING_MODE_NEAREST_EVEN,
 };
@@ -60,9 +61,9 @@ pub fn add_float64_with_rounding(
             sticky_b = if mant_b != 0 { 1 } else { 0 };
             mant_b = 0;
         } else {
-            let mask = (1 << shift_amount) - 1;
+            let mask = (1 << (shift_amount as u8)) - 1;
             let shifted_out = mant_b & mask;
-            mant_b = mant_b >> shift_amount;
+            mant_b = mant_b >> (shift_amount as u8);
             if shifted_out != 0 {
                 sticky_b = 1;
             }
@@ -74,9 +75,9 @@ pub fn add_float64_with_rounding(
             sticky_a = if mant_a != 0 { 1 } else { 0 };
             mant_a = 0;
         } else {
-            let mask = (1 << shift_amount) - 1;
+            let mask = (1 << (shift_amount as u8)) - 1;
             let shifted_out = mant_a & mask;
-            mant_a = mant_a >> shift_amount;
+            mant_a = mant_a >> (shift_amount as u8);
             if shifted_out != 0 {
                 sticky_a = 1;
             }
@@ -173,7 +174,7 @@ pub fn add_float64_with_rounding(
             max_shift
         };
 
-        result_mant = result_mant << actual_shift;
+        result_mant = result_mant << (actual_shift as u8);
         result_exp = result_exp - actual_shift;
     }
 
