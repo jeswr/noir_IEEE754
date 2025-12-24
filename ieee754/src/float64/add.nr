@@ -191,7 +191,13 @@ pub fn add_float64_with_rounding(
     let guard_bits = result_mant & 0xFF;
     result_mant = result_mant >> 8;
     let round_bits = guard_bits | result_sticky;
-    let should_round = should_round_up_8bit(round_bits, result_mant, result_sign, rounding_mode);
+    let should_round = if rounding_mode == 0 {
+        // NEAREST_EVEN (optimized inline)
+        let halfway: u64 = 0x80;
+        (round_bits > halfway) | ((round_bits == halfway) & ((result_mant & 1) == 1))
+    } else {
+        should_round_up_8bit(round_bits, result_mant, result_sign, rounding_mode)
+    };
     if should_round {
         result_mant = result_mant + 1;
         if result_mant >= (FLOAT64_IMPLICIT_BIT << 1) {

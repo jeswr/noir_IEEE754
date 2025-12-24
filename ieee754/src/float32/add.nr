@@ -154,7 +154,12 @@ pub fn add_float32_with_rounding(
     // Rounding
     let guard_bits = result_mant & 0x7;
     result_mant = result_mant >> 3;
-    let should_round = should_round_up(guard_bits, result_mant, result_sign, rounding_mode);
+    let should_round = if rounding_mode == 0 {
+        // NEAREST_EVEN (optimized inline)
+        (guard_bits > 4) | ((guard_bits == 4) & ((result_mant & 1) == 1))
+    } else {
+        should_round_up(guard_bits, result_mant, result_sign, rounding_mode)
+    };
     if should_round {
         result_mant = result_mant + 1;
         if result_mant >= ((FLOAT32_IMPLICIT_BIT as u64) << 1) {

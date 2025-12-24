@@ -238,7 +238,12 @@ pub fn div_float32_with_rounding(
     result_mant = result_mant >> 4;
 
     // Round to nearest, ties to even (using 4-bit guard, threshold is 8)
-    let should_round = should_round_up_4bit(guard_bits, result_mant, result_sign, rounding_mode);
+    let should_round = if rounding_mode == 0 {
+        // NEAREST_EVEN (optimized inline)
+        (guard_bits > 8) | ((guard_bits == 8) & ((result_mant & 1) == 1))
+    } else {
+        should_round_up_4bit(guard_bits, result_mant, result_sign, rounding_mode)
+    };
     if should_round {
         result_mant = result_mant + 1;
         // Check for overflow from rounding

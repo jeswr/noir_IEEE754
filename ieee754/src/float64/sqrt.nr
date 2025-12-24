@@ -181,7 +181,12 @@ pub fn sqrt_float64_with_rounding(a: IEEE754Float64, rounding_mode: u8) -> IEEE7
     result_mant = result_mant >> 3;
 
     // Round to nearest, ties to even
-    let should_round = should_round_up(guard_bits, result_mant, 0, rounding_mode); // sqrt result is always positive
+    let should_round = if rounding_mode == 0 {
+        // NEAREST_EVEN (optimized inline)
+        (guard_bits > 4) | ((guard_bits == 4) & ((result_mant & 1) == 1))
+    } else {
+        should_round_up(guard_bits, result_mant, 0, rounding_mode)
+    }; // sqrt result is always positive
     if should_round {
         result_mant = result_mant + 1;
         // Check for overflow from rounding
