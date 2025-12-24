@@ -226,3 +226,51 @@ pub fn should_round_up(guard_bits: u64, result_mant: u64, result_sign: u1, mode:
         false
     }
 }
+
+/// Determine if a value should round up based on guard bits and rounding mode (4-bit version)
+/// This version is for operations that use 4 guard bits (like division)
+/// 
+/// # Arguments
+/// * `guard_bits` - The guard bits (4 bits: GRSS where G=guard, R=round, S=sticky bits)
+/// * `result_mant` - The mantissa after shifting out guard bits
+/// * `result_sign` - The sign of the result (0 = positive, 1 = negative)
+/// * `mode` - The rounding mode to use (use ROUNDING_MODE_* constants)
+///
+/// # Returns
+/// * `true` if the mantissa should be incremented, `false` otherwise
+pub fn should_round_up_4bit(guard_bits: u64, result_mant: u64, result_sign: u1, mode: u8) -> bool {
+    // For 4-bit guard: Bits 3-0: G(3), R(2), S(1), S(0)
+    // guard_bits = GRSS (value 0-15)
+    // Midpoint is at 0b1000 = 8
+    
+    let is_positive = result_sign == 0;
+    let is_negative = result_sign == 1;
+    
+    // Check if we're exactly at the midpoint (guard_bits == 8, which is 0b1000)
+    let at_midpoint = guard_bits == 8;
+    
+    // Check if we're above the midpoint
+    let above_midpoint = guard_bits > 8;
+    
+    if mode == ROUNDING_MODE_NEAREST_EVEN {
+        // Round to nearest, ties to even
+        // Round up if: above midpoint OR (at midpoint AND result is odd)
+        above_midpoint | (at_midpoint & ((result_mant & 1) == 1))
+    } else if mode == ROUNDING_MODE_NEAREST_AWAY {
+        // Round to nearest, ties away from zero
+        // Round up if: above midpoint OR at midpoint
+        above_midpoint | at_midpoint
+    } else if mode == ROUNDING_MODE_TOWARD_POSITIVE {
+        // Round toward +Infinity (ceiling)
+        // Round up if positive and any guard bits are set
+        is_positive & (guard_bits != 0)
+    } else if mode == ROUNDING_MODE_TOWARD_NEGATIVE {
+        // Round toward -Infinity (floor)
+        // Round up if negative and any guard bits are set
+        is_negative & (guard_bits != 0)
+    } else {
+        // ROUNDING_MODE_TOWARD_ZERO
+        // Never round up (always truncate)
+        false
+    }
+}
