@@ -95,10 +95,8 @@ pub fn count_leading_zeros_u64_verified(value: u64) -> u64 {
     // Verification: If count > 0, bit at position (64 - count) must be 0 (if it exists)
     if (count > 0) & (count < 64) {
         let prev_bit_pos = (64 - count) as u8;
-        if prev_bit_pos < 64 {
-            let prev_bit = (value >> prev_bit_pos) & 1;
-            assert(prev_bit == 0);
-        }
+        let prev_bit = (value >> prev_bit_pos) & 1;
+        assert(prev_bit == 0);
     }
 
     count
@@ -247,10 +245,8 @@ pub fn count_leading_zeros_u23_verified(value: u32) -> u32 {
     // Verification: If count > 0, bit at position (23 - count) must be 0 (if it exists)
     if (count > 0) & (count < 23) {
         let prev_bit_pos = (23 - count) as u8;
-        if prev_bit_pos < 23 {
-            let prev_bit = (value_masked >> prev_bit_pos) & 1;
-            assert(prev_bit == 0);
-        }
+        let prev_bit = (value_masked >> prev_bit_pos) & 1;
+        assert(prev_bit == 0);
     }
 
     count
@@ -261,7 +257,7 @@ pub fn count_leading_zeros_u23_verified(value: u32) -> u32 {
 ///
 /// UNCONSTRAINED: Computes leading zeros for values up to 52 bits
 unconstrained fn count_leading_zeros_u52_unconstrained(value: u64) -> u64 {
-    let value_masked = value & 0xFFFFFFFFFFFFF; // Ensure it's 52-bit
+    let value_masked = value & 0xFFFFFFFFFFFFF; // Ensure it's 52-bit (bits 0-51)
     if value_masked == 0 {
         52
     } else {
@@ -269,31 +265,40 @@ unconstrained fn count_leading_zeros_u52_unconstrained(value: u64) -> u64 {
         let mut v = value_masked;
 
         // Binary search optimized for 52-bit values
+        // After each shift, we're checking high-order bits of the shifted value in a 64-bit register
+        // The goal is to position the highest 1-bit at bit 63 and count leading zeros from bit 51
         if (v & 0xFFFFFFF000000) == 0 {
+            // Check if top 28 bits (bits 24-51) are zero
             count += 28;
             v <<= 28;
         }
         if (v & 0xFFFFF00000000000) == 0 {
+            // After potential shift, check if top 20 bits are zero
             count += 20;
             v <<= 20;
         }
         if (v & 0xFFF0000000000000) == 0 {
+            // Check if top 12 bits are zero
             count += 12;
             v <<= 12;
         }
         if (v & 0xFF00000000000000) == 0 {
+            // Check if top 8 bits are zero
             count += 8;
             v <<= 8;
         }
         if (v & 0xF000000000000000) == 0 {
+            // Check if top 4 bits are zero
             count += 4;
             v <<= 4;
         }
         if (v & 0xC000000000000000) == 0 {
+            // Check if top 2 bits are zero
             count += 2;
             v <<= 2;
         }
         if (v & 0x8000000000000000) == 0 {
+            // Check if top bit is zero
             count += 1;
         }
 
@@ -328,10 +333,8 @@ pub fn count_leading_zeros_u52_verified(value: u64) -> u64 {
     // Verification: If count > 0, bit at position (52 - count) must be 0 (if it exists)
     if (count > 0) & (count < 52) {
         let prev_bit_pos = (52 - count) as u8;
-        if prev_bit_pos < 52 {
-            let prev_bit = (value_masked >> prev_bit_pos) & 1;
-            assert(prev_bit == 0);
-        }
+        let prev_bit = (value_masked >> prev_bit_pos) & 1;
+        assert(prev_bit == 0);
     }
 
     count
